@@ -1,4 +1,4 @@
-.flair {
+.lr .flair {
 height:70px;
 width:70px;
 cursor:pointer;
@@ -9,22 +9,39 @@ display: inline-block;
 position:relative;
 }
 
+.flair {
+opacity:0.35;
+filter:alpha(opacity=35);
+}
+
+.flair:not(.selected):hover {
+opacity:0.7;
+}
+
+.flair.selected {
+background-color: rgba(0,0,0,0.3);
+border-radius:10px;
+opacity:1;
+}
+
+.dfe .flair.selected {padding-bottom:2px}
+
 #show-base {
   display: none;
 }
 
 @media only screen and (min-width: 1921px) {
-  .flair {
+  .lr .flair {
     height:90px;
     width:90px;
   }
-  .eza:before {
+  .lr .eza:before {
     height:18px!important;
     width:20px!important;
     bottom:5px!important;
     right:6px!important;
   }
-  .eza2:before {
+  .lr .eza2:before {
     height:23px!important;
     width:27px!important;
     bottom:4px!important;
@@ -33,17 +50,17 @@ position:relative;
 }
 
 @media only screen and (max-width: 760px) {
-  .flair {
+  .lr .flair {
     height:50px;
     width:50px;
   }
-  .eza:before {
+  .lr .eza:before {
     height:12px!important;
     width:15px!important;
     bottom:2px!important;
     right:2px!important;
   }
-  .eza2:before {
+  .lr .eza2:before {
     height:17px!important;
     width:20px!important;
     right:2px!important;
@@ -52,10 +69,10 @@ position:relative;
 }
 
 .disabled, .hidden {
-  display: none;
+  display: none!important;
 }
 
-.eza:before {
+.lr .eza:before {
 content:"";
 display:block;
 height: 16px;
@@ -71,7 +88,7 @@ div.eza, div.eza2 {
 position:relative;
 }
 
-.eza2:before {
+.lr .eza2:before {
 content:"";
 display:block;
 height: 21px;
@@ -80,5 +97,75 @@ background:url(../images/eza2.webp);
 position:absolute;
 bottom:2px;
 right:4px;
+background-size:contain;
+}
+
+/*--- DFE Section --*/
+.dfe .flair {
+height:70px;
+width:79px;
+cursor:pointer;
+border:3px solid transparent;
+background-clip:padding-box;
+background-size: contain;
+display: inline-block;
+background-repeat: no-repeat;
+}
+
+@media only screen and (min-width: 1921px) {
+  .dfe .flair {
+    height:78px;
+    width:89px;
+  }
+  .dfe .eza:before {
+    height:18px!important;
+    width:20px!important;
+    right:6px!important;
+  }
+  .dfe .eza2:before {
+    height:24px!important;
+    width:28px!important;
+    right:4px!important;
+  }
+}
+
+@media only screen and (max-width: 760px) {
+  .dfe .flair {
+    height:48px;
+    width:55px;
+  }
+  .dfe .eza:before {
+    height:12px!important;
+    width:13px!important;
+    right:2px!important;
+  }
+  .dfe .eza2:before {
+    height:17px!important;
+    width:20px!important;
+    right:2px!important;
+  }
+}
+
+.dfe .eza:before {
+content:"";
+display:block;
+height: 16px;
+width: 18px;
+background:url(../images/eza.webp);
+position:absolute;
+bottom:0;
+right:4px;
+background-size:contain;
+}
+
+.dfe .eza2:before {
+content:"";
+display:block;
+height: 22px;
+width: 26px;
+background:url(../images/eza2.webp);
+position:absolute;
+bottom:-1px;
+right:3px;
 background-size:contain;
 }

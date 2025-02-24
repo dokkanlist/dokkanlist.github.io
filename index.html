@@ -12,9 +12,9 @@
     gtag('config', 'G-VKBXJKPT04');
   </script>
 
-  <title>Dokkan LR Checklist</title>
+  <title id="title">Dokkan Checklist</title>
 
-  <link rel="icon" type="image/x-icon" href="lr.ico">
+  <link rel="icon" id="favicon" type="image/x-icon" href="stone.ico">
 
   <!--stylesheets-->
   <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
@@ -32,7 +32,7 @@
   <!--meta-->
   <meta charset="utf-8">
   <meta name="author" content="antonlabz">
-  <meta name="description" content="LR Checklist for Dokkan Battle">
+  <meta name="description" content="Checklist for Dokkan Battle">
 </head>
 
 <body>
@@ -40,7 +40,7 @@
 
   <div class="header"></div>
 
-  <!--CHANGELOG-->
+    <!--CHANGELOG-->
   <div class="changelog">
     <h2>CHANGELOG</h2>
     <h3></h3>
@@ -52,7 +52,7 @@
   <div class="buttons">
     <button id="select-all">Select All</button>
     <button id="select-none">Reset</button>
-    <button id="list-hidden">List Removed LRs</button>
+    <button id="list-hidden">List Removed icons</button>
     <button id="generate">Generate Image</button>
     <button id="import">Import</button>
     <button id="export">Export</button>
@@ -60,7 +60,7 @@
       <input id="hide-lr" type="checkbox">
       <span class="slider"></span>
     </label>
-    <span class="tooltip">- remove LRs from list</span>
+    <span class="tooltip">- remove icons from list</span>
   </div>
 
   <!--Generate Image Window-->
@@ -92,7 +92,7 @@
   <div class="modal" id="import-modal">
     <div class="modal-container">
       <div class="modal-header">
-        <p class="warning">WARNING: Importing will overwrite your current checklist.</p>
+        <p class="warning">WARNING: Importing will overwrite BOTH checklists.</p>
         <span class="modal-text">Import Checklist</span>
       </div>
       <div class="modal-content3">
@@ -125,6 +125,7 @@
   </div>
 
   <div class="container2">
+    <button id="toggleButton"></button>
       <div class="icon-container">
         <div id="special"></div>
       </div>
@@ -134,11 +135,8 @@
 
 <footer>
   <div>
-    2022 -
-    <script>
-    document.write(new Date().getFullYear());
-    </script>.
-    Created by <a href="https://www.reddit.com/message/compose/?to=antonlabz&subject=Dokkan%20LR%20Checklist">antonlabz</a>. Visit the <a href="https://dokkanfe.github.io">DFE checklist</a>.
+    2022 - <script>document.write(new Date().getFullYear());</script>.
+    Created by <a href="https://www.reddit.com/message/compose/?to=antonlabz&subject=Dokkan%20LR%20Checklist">antonlabz</a>.</a>
   </div>
 </footer>
 
