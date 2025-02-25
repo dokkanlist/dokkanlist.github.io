@@ -36,9 +36,20 @@ background-color: transparent!important;
 position:absolute;
 top: -90px;
 right: 0;
+transition: transform 0.3s;
+transform-style: preserve-3d;
+backface-visibility: hidden;
 }
 
 .dfe #toggleButton {top: -80px;right:-10px;}
+
+.flip {
+transform: rotateY(90deg);
+}
+
+.flip-back {
+transform: rotateY(0deg); /* Complete the flip */
+}
 
 .buttons {
 display:block;
@@ -104,7 +115,7 @@ box-shadow: 0 25px 50px -12px #00000040;
 }
 
 #image-modal .modal-container {
-max-width:1500px;
+max-width:98%;
 }
 
 .modal-content, .modal-content2, .modal-content3 {
@@ -313,18 +324,24 @@ background-color:#ff3c3c;
 border:1px solid #fff;
 }
 
-.lr .header {
+.lr #header {
 background-image:url(../images/lr/header.png);
 width:335px;
 height:157px;
 margin:20px auto 10px;
+transition: transform 0.3s;
+transform-style: preserve-3d;
+backface-visibility: hidden;
 }
 
-.dfe .header {
+.dfe #header {
 background-image:url(../images/dfe/header.png);
 width:325px;
 height:147px;
 margin:20px auto;
+transition: transform 0.3s;
+transform-style: preserve-3d;
+backface-visibility: hidden;
 }
 
 .container2 {
@@ -334,7 +351,7 @@ max-width:1750px;
 margin:10px auto -40px;
 }
 
-.lr .icon-container {
+.lr #icon-container {
 background:#173d0e;
 position:relative;
 border:4px double #c3e7bb;
@@ -342,12 +359,18 @@ border-radius:4px;
 padding-top:10px;
 }
 
-.dfe .icon-container {
+.dfe #icon-container {
 background:#022418;
 position:relative;
 border:4px double #c3e7bb;
 border-radius:4px;
 padding-top:10px;
+}
+
+.glitch-blur {
+    transition: filter 0.1s ease-in-out, opacity 0.1s ease-in-out;
+    filter: blur(8px);
+    opacity: 0;
 }
 
 
@@ -458,7 +481,7 @@ border-radius:7px;
 margin-top:5px;
 }
 
-.changelog {
+#changelog {
 position: absolute;
 left: 10px;
 top: 30px;
@@ -470,19 +493,19 @@ border-radius: 5px;
 padding: 5px;
 }
 
-.changelog h2 {
+#changelog h2 {
 margin: 0;
 border-bottom:1px solid #7dff51;
 font-size: 1em;
 }
 
-.changelog h3 {
+#changelog h3 {
 font-size: .8em;
 margin: 5px;
 color: #ede19b;
 }
 
-.changelog li {
+#changelog li {
 font-size: 13px;
 color: #b9fda2;
 margin-bottom: 5px;

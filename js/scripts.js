@@ -2,14 +2,34 @@
 document.addEventListener("DOMContentLoaded", () => {
   //global declarations
   let enter = document.getElementById('special');
-  let changelog = document.getElementById('changelog-item');
+  let changelogList = document.getElementById('changelog-item');
   $("#hide-lr").prop("checked", false);
 
+  //target elements for animations
   const toggleButton = document.getElementById("toggleButton");
-  if (toggleButton) {
-      toggleButton.removeEventListener("click", toggleMode); // Remove previous listeners
-      toggleButton.addEventListener("click", toggleMode);
-  }
+  const iconContainer = document.getElementById("icon-container");
+  const header = document.getElementById("header");
+
+  //event listening for clicks on toggle button
+  toggleButton.addEventListener("click", function () {
+    this.classList.add("flip");
+    header.classList.add("flip");
+    iconContainer.classList.add("glitch-blur");
+
+    setTimeout(() => {
+        toggleMode(); // Switch mode when halfway flipped
+        this.classList.remove("flip"); // Complete the animation
+        this.classList.add("flip-back"); // Finish rotation
+        header.classList.remove("flip"); // Complete the animation
+        header.classList.add("flip-back"); // Finish rotation
+        iconContainer.classList.remove("glitch-blur");
+    }, 150); // Wait for half of the animation time
+
+    setTimeout(() => {
+        this.classList.remove("flip-back"); // Reset so animation can happen again
+        header.classList.remove("flip-back");
+    }, 300);
+});
 
   // loads last mode from localstorage otherwise default to LR
   let currentMode = localStorage.getItem("dokkanMode") || "lr";
@@ -45,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("dokkanMode", mode); // Save mode to localStorage
       }
       enter.innerHTML = "";
-      changelog.innerHTML = "";
+      changelogList.innerHTML = "";
   }
 
   //main icons handling
@@ -83,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
       60,61,62,63,64,65,66,67,68,69,
       70,71,72,73,74,75,78,
       81,82,83,87,
-      91,92
+      91,92,93,94
     ]
     let dfEZA2 = [
       1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 13, 15, 18
@@ -94,7 +114,9 @@ document.addEventListener("DOMContentLoaded", () => {
     "Icons re-organized based on true chronological order",
     "Added toggle to switch to DFE checklist",
     "INT Namek Goku EZA",
-    "AGL Final Form Frieza EZA"
+    "AGL Final Form Frieza EZA",
+    "AGL Demon King Piccolo",
+    "7th Anniversary LR EZAs"
     ]
 
     //DFE changelog items
@@ -141,13 +163,13 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       listItem.innerHTML = modifiedText;
-      changelog.appendChild(listItem);
+      changelogList.appendChild(listItem);
     });
 
     // Fetch the latest commit date from GitHub API
     const fetchLatestCommitDate = async () => {
       try {
-        const response = await fetch('https://api.github.com/repos/dokkanlr/dokkanlr.github.io/commits');
+        const response = await fetch('https://api.github.com/repos/dokkanlist/dokkanlist.github.io/commits');
         if (!response.ok) throw new Error('Failed to fetch commit data');
         const commits = await response.json();
 
@@ -160,14 +182,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // Update the changelog date dynamically
-        document.querySelector('.changelog h3').textContent = `Last Update: ${formattedDate}`;
+        document.querySelector('#changelog h3').textContent = `Last Update: ${formattedDate}`;
       } catch (error) {
         console.error('Error fetching the latest commit date:', error);
       }
     };
 
     // Call the function during initialization
-    //fetchLatestCommitDate();
+    fetchLatestCommitDate();
   }
 
   //coreFunctions must be below loadFlairs
@@ -339,7 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     $(".modal-content").empty();
 
-     domtoimage.toPng($('.icon-container')[0]).then(function (dataUrl) {
+     domtoimage.toPng($('#icon-container')[0]).then(function (dataUrl) {
              const img = new Image();
              img.src = dataUrl;
              $(".modal-content").append(img);
@@ -349,7 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   //download feature
   function download() {
-    domtoimage.toBlob($('.icon-container')[0]).then(function (blob) {
+    domtoimage.toBlob($('#icon-container')[0]).then(function (blob) {
           window.saveAs(blob, 'checklist.png');
       });
   }
@@ -409,15 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
     countLegends();
   }
 
-  //$(document).ready(function() {
-    //fetch('https://api.github.com/repos/dokkanlr/dokkanlr.github.io/contents/images/icons?ref=master')
-    //.then(response => response.json()) // convert API to json format
-    //.then(function (response) {
-    //  total = Object.values(response).length;
-
-    //});
-
-    //main function for selecting icons
+  //main function for selecting icons
   $("#special").on("click", "div", function(e) {
     const isChecked = document.getElementById('hide-lr').checked;
 

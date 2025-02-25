@@ -24,8 +24,6 @@ border-radius:10px;
 opacity:1;
 }
 
-.dfe .flair.selected {padding-bottom:2px}
-
 #show-base {
   display: none;
 }
@@ -110,6 +108,7 @@ background-clip:padding-box;
 background-size: contain;
 display: inline-block;
 background-repeat: no-repeat;
+padding-bottom:2px
 }
 
 @media only screen and (min-width: 1921px) {

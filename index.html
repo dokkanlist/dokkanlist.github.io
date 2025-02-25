@@ -38,10 +38,10 @@
 <body>
   <noscript>JavaScript is required to run this page.</noscript>
 
-  <div class="header"></div>
+  <div id="header"></div>
 
     <!--CHANGELOG-->
-  <div class="changelog">
+  <div id="changelog">
     <h2>CHANGELOG</h2>
     <h3></h3>
     <span id="changelog-item"></span>
@@ -52,7 +52,7 @@
   <div class="buttons">
     <button id="select-all">Select All</button>
     <button id="select-none">Reset</button>
-    <button id="list-hidden">List Removed icons</button>
+    <button id="list-hidden">List Removed Icons</button>
     <button id="generate">Generate Image</button>
     <button id="import">Import</button>
     <button id="export">Export</button>
@@ -76,12 +76,12 @@
     </div>
   </div>
 
-  <!--Removed LRs Window-->
+  <!--Removed Icons Window-->
   <div class="modal" id="removed-modal">
     <div class="modal-container">
       <div class="modal-header">
-        <span class="modal-text">Removed LRs</span>
-        <p><i>(Click icons to unhide LRs)</i></p>
+        <span class="modal-text">Removed Icons</span>
+        <p><i>(Click icons to unhide Icons)</i></p>
         <span class="close-btn">&times;</span>
       </div>
       <div class="modal-content2"></div>
@@ -124,9 +124,10 @@
     </div>
   </div>
 
+  <!--Main Icons Container-->
   <div class="container2">
     <button id="toggleButton"></button>
-      <div class="icon-container">
+      <div id="icon-container">
         <div id="special"></div>
       </div>
   </div>
