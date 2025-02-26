@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
       60,61,62,63,64,65,66,67,68,69,
       71,72,73,74,75,76,
       80,82,83,85,86,87,88,89,
-      91,93,94,95,98,
+      91,93,94,95,96,97,98,
       116,
       136,
       149
@@ -116,6 +116,8 @@ document.addEventListener("DOMContentLoaded", () => {
     "INT Namek Goku EZA",
     "AGL Final Form Frieza EZA",
     "AGL Demon King Piccolo",
+    "STR Kaioken Goku EZA",
+    "TEQ Great Ape Vegeta EZA",
     "7th Anniversary LR EZAs"
     ]
 
