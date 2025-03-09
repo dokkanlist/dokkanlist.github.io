@@ -289,11 +289,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   //total legend tracker
   function countLegends() {
+    let rarity = currentMode === "lr" ? "LRs" : "DFEs";
     const amount = $(".selected").length;
     const total = $("#special .flair").length;
     const disabled = $('.disabled').length;
 
-    $('#counter').html("<span class='cl'>Total LRs - </span>" + amount + "/" + (total-disabled));
+    $('#counter').html("<span class='cl'>Total "+rarity+" - </span>" + amount + "/" + (total-disabled));
   }
 
   //unhides specific Legends
