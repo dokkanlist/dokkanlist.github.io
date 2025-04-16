@@ -113,12 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const LRupdateItems = [
     "Icons re-organized based on true chronological order",
     "Added toggle to switch to DFE checklist",
-    "INT Namek Goku EZA",
-    "AGL Final Form Frieza EZA",
-    "AGL Demon King Piccolo",
-    "STR Kaioken Goku EZA",
-    "TEQ Great Ape Vegeta EZA",
-    "7th Anniversary LR EZAs"
+    "PHY Pikkon"
     ]
 
     //DFE changelog items
@@ -132,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
      // Create icons dynamically
      // number format - LR : DFE
-    let total = currentMode === "lr" ? 160 : 131
+    let total = currentMode === "lr" ? 161 : 131
     let flaircheck = currentMode === "dfe" ? "b" : "";
 
     // MAIN FLAIR CREATION LOOP
