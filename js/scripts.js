@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
       91,92,96,97,100
     ]
     let dfEZA2 = [
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 18
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 18
     ]
 
     //LR changelog items
@@ -119,16 +119,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     //DFE changelog items
     const DFEupdateItems = [
-    "Added toggle to switch to LR checklist",
-    "STR SSJ Goku/Gohan EZA",
-    "AGL 1st Form Cell EZA",
-    "AGL Pikkon EZA",
-    "TEQ Janemba EZA"
+    "INT Hit",
+    "TEQ SSBKK Goku",
+    "AGL SSBKK Goku Super EZA"
     ]
 
      // Create icons dynamically
      // number format - LR : DFE
-    let total = currentMode === "lr" ? 162 : 131
+    let total = currentMode === "lr" ? 162 : 133
     let flaircheck = currentMode === "dfe" ? "b" : "";
 
     // MAIN FLAIR CREATION LOOP
