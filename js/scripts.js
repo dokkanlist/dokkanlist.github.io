@@ -83,8 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
       50,51,52,53,54,55,56,57,58,59,
       60,61,62,63,64,65,66,67,68,69,
       71,72,73,74,75,76,
-      80,82,83,85,86,87,88,89,
-      91,93,94,95,96,97,98,
+      80,82,83,84,85,86,87,88,89,
+      90,91,93,94,95,96,97,98,
       116,
       136,
       149
@@ -111,10 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     //LR changelog items
     const LRupdateItems = [
-    "Icons re-organized based on true chronological order",
-    "Added toggle to switch to DFE checklist",
-    "AGL SSJ Bardock",
-    "PHY Pikkon"
+    "PHY Pikkon",
+    "STR Tao EZA",
+    "STR Hit & Goku EZA"
     ]
 
     //DFE changelog items
