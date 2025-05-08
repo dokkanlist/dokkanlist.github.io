@@ -325,7 +325,7 @@ border:1px solid #fff;
 }
 
 .lr #header {
-background-image:url(../images/lr/header.png);
+background-image:url(../images/lr/header.webp);
 width:335px;
 height:157px;
 margin:20px auto 10px;
@@ -335,7 +335,7 @@ backface-visibility: hidden;
 }
 
 .dfe #header {
-background-image:url(../images/dfe/header.png);
+background-image:url(../images/dfe/header.webp);
 width:325px;
 height:151px;
 margin:20px auto;
