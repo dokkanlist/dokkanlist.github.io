@@ -23,7 +23,7 @@ background-size: contain;
 }
 
 .lr_switch {
-background:url(../images/switch-lr2.webp);
+background:url(../images/switch-lr.webp);
 display:block;
 width: 127px;
 height: 64px;
@@ -337,7 +337,7 @@ backface-visibility: hidden;
 .dfe #header {
 background-image:url(../images/dfe/header.png);
 width:325px;
-height:147px;
+height:151px;
 margin:20px auto;
 transition: transform 0.3s;
 transform-style: preserve-3d;
