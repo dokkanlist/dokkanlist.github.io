@@ -113,7 +113,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const LRupdateItems = [
     "PHY Pikkon",
     "STR Tao EZA",
-    "STR Hit & Goku EZA"
+    "STR Hit & Goku EZA",
+    "PHY Caulifla + Kale"
     ]
 
     //DFE changelog items
@@ -125,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
      // Create icons dynamically
      // number format - LR : DFE
-    let total = currentMode === "lr" ? 162 : 133
+    let total = currentMode === "lr" ? 163 : 133
     let flaircheck = currentMode === "dfe" ? "b" : "";
 
     // MAIN FLAIR CREATION LOOP
@@ -174,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Get the date of the latest commit
         const latestCommitDate = commits[0].commit.committer.date;
-        const formattedDate = new Date(latestCommitDate).toLocaleDateString("en-GB", {
+        const formattedDate = new Date(latestCommitDate).toLocaleDateString(undefined, {
           year: 'numeric',
           month: 'short',
           day: 'numeric'
