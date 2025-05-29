@@ -122,12 +122,13 @@ document.addEventListener("DOMContentLoaded", () => {
     "INT Hit",
     "TEQ SSBKK Goku",
     "AGL SSBKK Goku Super EZA",
-    "TEQ Caulifla & Kale EZA"
+    "TEQ Caulifla & Kale EZA",
+    "PHY Tao"
     ]
 
      // Create icons dynamically
      // number format - LR : DFE
-    let total = currentMode === "lr" ? 163 : 133
+    let total = currentMode === "lr" ? 163 : 134
     let flaircheck = currentMode === "dfe" ? "b" : "";
 
     // MAIN FLAIR CREATION LOOP
