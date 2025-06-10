@@ -361,22 +361,53 @@ document.addEventListener("DOMContentLoaded", () => {
   //export image function
   function generateImage() {
     toggleModal('image-modal');
-
     $(".modal-content").empty();
 
-     domtoimage.toPng($('#icon-container')[0]).then(function (dataUrl) {
-             const img = new Image();
-             img.src = dataUrl;
-             $(".modal-content").append(img);
-     });
-  }
+    const node = document.getElementById('icon-container');
 
+    htmlToImage.toPng(node, {
+      pixelRatio: 3, // Increase for sharper output (e.g., 2x or 3x)
+      skipFonts: true,
+      skipAutoScale: false,
+      style: {
+        transform: 'scale(1)', // Prevent distortion
+        transformOrigin: 'top left'
+      }
+    })
+    .then(function (dataUrl) {
+      const img = new Image();
+      img.src = dataUrl;
+      img.style.width = node.offsetWidth + "px"; // Display at natural size
+      img.style.height = node.offsetHeight + "px";
+      $(".modal-content").append(img);
+    })
+    .catch(function (error) {
+      console.error('Image generation failed:', error);
+    });
+  }
 
   //download feature
   function download() {
-    domtoimage.toBlob($('#icon-container')[0]).then(function (blob) {
-          window.saveAs(blob, 'checklist.png');
-      });
+    const node = document.getElementById('icon-container');
+
+    htmlToImage.toBlob(node, {
+      pixelRatio: 3, // Higher = sharper image
+      skipFonts: true,
+      filter: (node) => {
+        // Avoid extension styles and cross-origin errors
+        return !(node.tagName === 'LINK' && node.href && node.href.startsWith('moz-extension://'));
+      }
+    })
+    .then(function (blob) {
+      if (blob) {
+        window.saveAs(blob, 'checklist.png');
+      } else {
+        console.error("Image blob generation failed.");
+      }
+    })
+    .catch(function (error) {
+      console.error('Download failed:', error);
+    });
   }
 
   //export localStorage
@@ -464,6 +495,8 @@ document.addEventListener("DOMContentLoaded", () => {
       countLegends();
     }
   });
+
+  document.getElementById('image-download')?.addEventListener('click', download);
 
   //select all button
   $("#select-all").on("click", function() {
