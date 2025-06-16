@@ -103,7 +103,8 @@ document.addEventListener("DOMContentLoaded", () => {
       60,61,62,63,64,65,66,67,68,69,
       70,71,72,73,74,75,78,79,
       80,81,82,83,84,85,87,88,
-      91,92,96,97,100
+      91,92,93,96,97,
+      100,104
     ]
     let dfEZA2 = [
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 18
@@ -111,24 +112,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     //LR changelog items
     const LRupdateItems = [
-    "PHY Pikkon",
-    "STR Tao EZA",
-    "STR Hit & Goku EZA",
-    "PHY Caulifla + Kale"
+    "PHY Caulifla + Kale",
+    "STR Tien"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
-    "INT Hit",
-    "TEQ SSBKK Goku",
-    "AGL SSBKK Goku Super EZA",
-    "TEQ Caulifla & Kale EZA",
-    "PHY Tao"
+    "PHY Tao",
+    "AGL Ginyu EZA",
+    "INT Yamcha EZA"
     ]
 
      // Create icons dynamically
      // number format - LR : DFE
-    let total = currentMode === "lr" ? 163 : 134
+    let total = currentMode === "lr" ? 164 : 134
     let flaircheck = currentMode === "dfe" ? "b" : "";
 
     // MAIN FLAIR CREATION LOOP
