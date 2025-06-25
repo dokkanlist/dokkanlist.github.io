@@ -85,6 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
       71,72,73,74,75,76,
       80,82,83,84,85,86,87,88,89,
       90,91,93,94,95,96,97,98,
+      104,
       116,
       136,
       149
@@ -113,7 +114,8 @@ document.addEventListener("DOMContentLoaded", () => {
     //LR changelog items
     const LRupdateItems = [
     "PHY Caulifla + Kale",
-    "STR Tien"
+    "STR Tien",
+    "INT Prime Tien EZA"
     ]
 
     //DFE changelog items
