@@ -64,8 +64,8 @@ const iconCounts = {
 
 // Display summary
 console.log('Icon Summary:');
-console.log(`   LR Icons:  ${lrFiles.length} files found, highest number: ${lrMax}`);
-console.log(`   DFE Icons: ${dfeFiles.length} files found, highest number: ${dfeMax}`);
+console.log(`LR Icons:  ${lrFiles.length} files found, highest number: ${lrMax}`);
+console.log(`DFE Icons: ${dfeFiles.length} files found, highest number: ${dfeMax}`);
 
 // Check for gaps in numbering
 const lrHasGaps = lrFiles.length !== lrMax;
@@ -79,7 +79,7 @@ if (lrHasGaps || dfeHasGaps) {
     for (let i = 1; i <= lrMax; i++) {
       if (!lrFiles.includes(i)) lrGaps.push(i);
     }
-    console.log(`   LR missing: ${lrGaps.slice(0, 10).join(', ')}${lrGaps.length > 10 ? '...' : ''} (${lrGaps.length} total)`);
+    console.log(`LR missing: ${lrGaps.slice(0, 10).join(', ')}${lrGaps.length > 10 ? '...' : ''} (${lrGaps.length} total)`);
   }
 
   if (dfeHasGaps) {
@@ -87,7 +87,7 @@ if (lrHasGaps || dfeHasGaps) {
     for (let i = 1; i <= dfeMax; i++) {
       if (!dfeFiles.includes(i)) dfeGaps.push(i);
     }
-    console.log(`   DFE missing: ${dfeGaps.slice(0, 10).join(', ')}${dfeGaps.length > 10 ? '...' : ''} (${dfeGaps.length} total)`);
+    console.log(`DFE missing: ${dfeGaps.slice(0, 10).join(', ')}${dfeGaps.length > 10 ? '...' : ''} (${dfeGaps.length} total)`);
   }
 }
 
@@ -129,12 +129,12 @@ try {
       console.log(`Updated fallback values in scripts.js to: lr: ${lrMax}, dfe: ${dfeMax}`);
     } else {
       console.log('Could not find fallback values line in scripts.js');
-      console.log('   Make sure line 2 contains: let iconCounts = { lr: XXX, dfe: XXX }; // Default fallback values');
+      console.log('Make sure line 2 contains: let iconCounts = { lr: XXX, dfe: XXX }; // Default fallback values');
     }
   }
 } catch (error) {
   console.error('Error updating scripts.js:', error.message);
-  console.log('   The icon counts JSON was still created successfully.');
+  console.log('The icon counts JSON was still created successfully.');
 }
 
 // Show what was written
