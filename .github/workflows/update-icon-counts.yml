@@ -19,19 +19,25 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Generate icon counts
+    - name: Generate icon counts and update fallbacks
       run: node generate-file-list.js
 
     - name: Check for changes
       id: check-changes
       run: |
-        git diff --quiet js/iconCounts.json || echo "changed=true" >> $GITHUB_OUTPUT
+        if git diff --quiet js/iconCounts.json js/scripts.js; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+          echo "Files changed:"
+          git diff --name-only js/
+        fi
 
     - name: Commit and push if changed
       if: steps.check-changes.outputs.changed == 'true'
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git add js/iconCounts.json
-        git commit -m "Update icon counts [skip ci]"
+        git add js/iconCounts.json js/scripts.js
+        git commit -m "Update icon counts and fallback values [skip ci]"
         git push

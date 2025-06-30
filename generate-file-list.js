@@ -1,4 +1,4 @@
-// Run with: node generate-file-list.js
+// generate-file-list.js - UPDATED VERSION
 
 const fs = require('fs');
 const path = require('path');
@@ -98,10 +98,45 @@ if (!fs.existsSync(jsDir)) {
   console.log('\nCreated js directory');
 }
 
-// Write the file
+// Write the JSON file
 const outputPath = './js/iconCounts.json';
 fs.writeFileSync(outputPath, JSON.stringify(iconCounts, null, 2));
+console.log(`\nSuccessfully wrote icon counts to: ${outputPath}`);
+
+// UPDATE FALLBACK VALUES IN SCRIPTS.JS
+console.log('\nUpdating fallback values in scripts.js...');
+
+try {
+  const scriptsPath = './js/scripts.js';
+
+  if (!fs.existsSync(scriptsPath)) {
+    console.error('scripts.js not found at', scriptsPath);
+  } else {
+    // Read the scripts.js file
+    let scriptsContent = fs.readFileSync(scriptsPath, 'utf8');
+
+    // Create the regex pattern to match the line
+    const fallbackLineRegex = /let iconCounts = \{ lr: \d+, dfe: \d+ \}; \/\/ Default fallback values/;
+
+    // Check if the pattern exists
+    if (fallbackLineRegex.test(scriptsContent)) {
+      // Replace with new values
+      const newLine = `let iconCounts = { lr: ${lrMax}, dfe: ${dfeMax} }; // Default fallback values`;
+      scriptsContent = scriptsContent.replace(fallbackLineRegex, newLine);
+
+      // Write back to file
+      fs.writeFileSync(scriptsPath, scriptsContent);
+      console.log(`Updated fallback values in scripts.js to: lr: ${lrMax}, dfe: ${dfeMax}`);
+    } else {
+      console.log('Could not find fallback values line in scripts.js');
+      console.log('   Make sure line 2 contains: let iconCounts = { lr: XXX, dfe: XXX }; // Default fallback values');
+    }
+  }
+} catch (error) {
+  console.error('Error updating scripts.js:', error.message);
+  console.log('   The icon counts JSON was still created successfully.');
+}
 
 // Show what was written
-console.log('\nFile contents:');
+console.log('\niconCounts.json contents:');
 console.log(JSON.stringify(iconCounts, null, 2));
