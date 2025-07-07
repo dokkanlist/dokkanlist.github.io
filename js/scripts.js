@@ -117,26 +117,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 71-76,
       80, 82-89, 90-91, 93-98, 104, 116, 136, 149
     `);
-    let lrEZA2 = [1,6]
+    let lrEZA2 = [1,6,54]
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
       60-69, 70-75, 78-79, 80-85, 87-88, 91-93, 96-97, 100, 104
     `);
-    let dfEZA2 = parseRanges('1-11, 13, 14, 15, 18');
+    let dfEZA2 = parseRanges('1-11, 13, 14, 15, 18-20');
 
     //LR changelog items
     const LRupdateItems = [
-    "PHY Caulifla + Kale",
-    "STR Tien",
-    "INT Prime Tien EZA"
+      "STR SSB Goku + Vegeta",
+      "STR Rose + Zamasu",
+      "STR F2P Goku Black EZA"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
-    "PHY Tao",
-    "AGL Ginyu EZA",
-    "INT Yamcha EZA"
+    "PHY Vegito Blue Super EZA",
+    "AGL Rose Super EZA"
     ]
 
      // Create icons dynamically
