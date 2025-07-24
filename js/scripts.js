@@ -127,9 +127,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "STR SSB Goku + Vegeta",
-      "STR Rose + Zamasu",
-      "STR F2P Goku Black EZA"
+      "AGL SSJ4 Gogeta",
+      "PHY Omega Shenron",
+      "STR Nuova Shenron"
     ]
 
     //DFE changelog items
