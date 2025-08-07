@@ -115,29 +115,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadFlairs = function() {
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 71-76,78,
-      80, 82-89, 90-91, 93-98, 104, 116, 136, 149
+      80, 82-89, 90-91, 93-98, 102, 104, 116, 136, 149
     `);
-    let lrEZA2 = [1,6,54]
+    let lrEZA2 = [1,6,12,54]
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 78-79, 80-85, 87-88, 91-93, 96-97, 100, 104
+      60-69, 70-75, 77-79, 80-85, 87-88, 91-93, 96-97, 100, 104
     `);
     let dfEZA2 = parseRanges('1-11, 13, 14, 15, 17-20, 25-26');
 
     //LR changelog items
     const LRupdateItems = [
-      "AGL SSJ4 Gogeta",
-      "PHY Omega Shenron",
-      "STR Nuova Shenron",
-      "GDC Part 2 EZAs"
+      "INT Vegeta & Trunks EZA",
+      "AGL Trunks & Goten Super EZA",
+      "INT SSJ Gohan + Trunks & Goten"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
     "PHY Vegito Blue Super EZA",
     "AGL Rose Super EZA",
-    "GDC Part 2 EZAs"
+    "GDC Part 2 EZAs",
+    "INT SSJ4 Gogeta EZA"
     ]
 
      // Create icons dynamically
