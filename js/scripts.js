@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   //main icons handling
   loadFlairs = function() {
     let lrEZA = parseRanges(`
-      1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 71-76,78,
+      1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78,
       80, 82-89, 90-91, 93-98, 102, 104, 116, 136, 149
     `);
     let lrEZA2 = [1,6,12,54]
@@ -129,7 +129,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const LRupdateItems = [
       "INT Vegeta & Trunks EZA",
       "AGL Trunks & Goten Super EZA",
-      "INT SSJ Gohan + Trunks & Goten"
+      "INT SSJ Gohan + Trunks & Goten",
+      "TEQ SSJ2 Gohan EZA"
     ]
 
     //DFE changelog items

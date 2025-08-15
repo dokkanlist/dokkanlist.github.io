@@ -9,6 +9,8 @@ on:
 jobs:
   update-counts:
     runs-on: ubuntu-latest
+    # Only run if the pusher is NOT the GitHub Actions bot
+    if: github.actor != 'github-actions[bot]'
 
     steps:
     - name: Checkout repository
