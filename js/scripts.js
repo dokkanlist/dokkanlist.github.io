@@ -127,10 +127,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "INT Vegeta & Trunks EZA",
-      "AGL Trunks & Goten Super EZA",
       "INT SSJ Gohan + Trunks & Goten",
-      "TEQ SSJ2 Gohan EZA"
+      "TEQ SSJ2 Gohan EZA",
+      "TEQ Golden Frieza + Gogeta"
     ]
 
     //DFE changelog items
