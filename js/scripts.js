@@ -115,7 +115,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadFlairs = function() {
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78,
-      80, 82-89, 90-91, 93-98, 102, 104, 116, 136, 149
+      80, 82-89, 90-91, 93-98, 101-102, 104, 116, 136, 149
     `);
     let lrEZA2 = [1,6,12,54]
 
@@ -127,9 +127,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "INT SSJ Gohan + Trunks & Goten",
-      "TEQ SSJ2 Gohan EZA",
-      "TEQ Golden Frieza + Gogeta"
+      "TEQ Golden Frieza + Gogeta",
+      "AGL Golden Frieza EZA",
+      "TEQ Broly"
     ]
 
     //DFE changelog items
