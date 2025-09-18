@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78,
       80, 82-89, 90-91, 93-98, 101-102, 104, 116, 136, 149
     `);
-    let lrEZA2 = [1,6,12,54]
+    let lrEZA2 = [1,6,8,12,54]
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
@@ -129,7 +129,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const LRupdateItems = [
       "TEQ Golden Frieza + Gogeta",
       "AGL Golden Frieza EZA",
-      "TEQ Broly"
+      "TEQ Broly",
+      "STR LSSJ Broly Super EZA"
     ]
 
     //DFE changelog items
