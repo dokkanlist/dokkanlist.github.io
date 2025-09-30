@@ -135,10 +135,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //DFE changelog items
     const DFEupdateItems = [
-    "PHY Vegito Blue Super EZA",
-    "AGL Rose Super EZA",
-    "GDC Part 2 EZAs",
-    "INT SSJ4 Gogeta EZA"
+    "STR Super Baby"
     ]
 
      // Create icons dynamically
