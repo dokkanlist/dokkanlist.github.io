@@ -43,8 +43,8 @@ jobs:
     - name: Commit and push if changed
       if: steps.check-changes.outputs.changed == 'true'
       run: |
-        git config --local user.email "antonlabz14@gmail.com"
-        git config --local user.name "antonlabz"
+        git config --local user.email "20198370+antonlabz@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
 
         git add js/iconCounts.json js/scripts.js
         git commit -m "Update icon counts and fallback values"
