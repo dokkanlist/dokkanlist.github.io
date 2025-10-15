@@ -1,20 +1,27 @@
+# .github/workflows/update-icon-counts.yml
+
 name: Update Icon Counts
 
 on:
   push:
     paths:
-      - 'images/**/*.webp'  # Trigger when images are added/removed
-  workflow_dispatch:        # Allow manual trigger from GitHub Actions tab
+      - 'images/**/*.webp'
+    branches:
+      - master
+  workflow_dispatch:
 
 jobs:
   update-counts:
     runs-on: ubuntu-latest
-    # Only run if the pusher is NOT the GitHub Actions bot
     if: github.actor != 'github-actions[bot]'
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        # Use PAT instead of default token
+        token: ${{ secrets.BOT_TOKEN }}
+        fetch-depth: 0
 
     - name: Setup Node.js
       uses: actions/setup-node@v3
@@ -31,16 +38,15 @@ jobs:
           echo "changed=false" >> $GITHUB_OUTPUT
         else
           echo "changed=true" >> $GITHUB_OUTPUT
-          echo "Files changed:"
-          git diff --name-only js/
         fi
 
     - name: Commit and push if changed
       if: steps.check-changes.outputs.changed == 'true'
       run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
+        git config --local user.email "antonlabz14@gmail.com"
+        git config --local user.name "antonlabz"
+
         git add js/iconCounts.json js/scripts.js
-        # Use [skip actions] to skip ALL GitHub Actions including Pages
-        git commit -m "🤖 Update icon counts and fallback values [skip actions]"
+        git commit -m "Update icon counts and fallback values"
+
         git push
