@@ -71,6 +71,6 @@ jobs:
         git add js/iconCounts.json js/scripts.js
 
         # Add [skip ci] to prevent any further workflows
-        git commit -m "🤖 Update icon counts and fallback values [skip ci]"
+        git commit -m "Update icon counts and fallback values [skip ci]"
 
         git push
