@@ -127,15 +127,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "STR LSSJ Broly Super EZA",
-      "TEQ Super 17 EZA",
-      "AGL Majin Vegeta Super EZA",
+      "INT GT SSJ Gohan/Goten",
       "STR Chichi"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
-    "STR Super Baby"
+    "TEQ SSJ4 Daima Goku"
     ]
 
      // Create icons dynamically
