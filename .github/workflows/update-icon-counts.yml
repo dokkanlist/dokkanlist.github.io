@@ -8,6 +8,8 @@ on:
       - completed
     branches:
       - master
+  # Also allow manual trigger
+  workflow_dispatch:
 
 jobs:
   update-counts:
@@ -22,7 +24,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         token: ${{ secrets.BOT_TOKEN }}
-        ref: master  # Ensure we're on the latest master after Pages deployment
+        ref: master
         fetch-depth: 0
 
     - name: Setup Node.js
@@ -30,47 +32,32 @@ jobs:
       with:
         node-version: '18'
 
-    # Check if images were actually added in the triggering commit
-    - name: Check for image changes
-      id: check-images
-      run: |
-        # Get the commit that triggered the Pages build
-        TRIGGER_SHA="${{ github.event.workflow_run.head_sha }}"
-
-        # Check if that commit modified any images
-        if git diff-tree --no-commit-id --name-only -r $TRIGGER_SHA | grep -q "images/.*\.webp$"; then
-          echo "images_changed=true" >> $GITHUB_OUTPUT
-          echo "Images were modified in the triggering commit"
-        else
-          echo "images_changed=false" >> $GITHUB_OUTPUT
-          echo "No image changes in the triggering commit"
-        fi
-
     - name: Generate icon counts and update fallbacks
-      if: steps.check-images.outputs.images_changed == 'true'
-      run: node generate-file-list.js
+      run: |
+        echo "Running generate-file-list.js..."
+        node generate-file-list.js
+
+        echo "Generated iconCounts.json:"
+        cat js/iconCounts.json
 
     - name: Check for changes
-      if: steps.check-images.outputs.images_changed == 'true'
       id: check-changes
       run: |
         if git diff --quiet js/iconCounts.json js/scripts.js; then
           echo "changed=false" >> $GITHUB_OUTPUT
+          echo "No changes needed"
         else
           echo "changed=true" >> $GITHUB_OUTPUT
+          echo "Files have changes:"
+          git diff --name-only
         fi
 
     - name: Commit and push if changed
-      if: |
-        steps.check-images.outputs.images_changed == 'true' &&
-        steps.check-changes.outputs.changed == 'true'
+      if: steps.check-changes.outputs.changed == 'true'
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
         git add js/iconCounts.json js/scripts.js
-
-        # Add [skip ci] to prevent any further workflows
         git commit -m "Update icon counts and fallback values [skip ci]"
-
         git push
