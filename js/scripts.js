@@ -128,7 +128,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     //LR changelog items
     const LRupdateItems = [
       "INT GT SSJ Gohan/Goten",
-      "STR Chichi"
+      "STR Chichi",
+      "AGL Gomah"
     ]
 
     //DFE changelog items
