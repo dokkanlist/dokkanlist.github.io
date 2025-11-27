@@ -1,5 +1,5 @@
 // loads a count of icons in each folder from the pre-generated JSON file
-let iconCounts = { lr: 174, dfe: 136 }; // Default fallback values - automatically updated by nodeJS
+let iconCounts = { lr: 175, dfe: 136 }; // Default fallback values - automatically updated by nodeJS
 
 async function loadIconCounts() {
   try {
