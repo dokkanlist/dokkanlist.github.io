@@ -115,26 +115,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadFlairs = function() {
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
-      82-89, 90-91, 93-98, 101-102, 104, 116, 136, 149
+      82-89, 90-98, 101-102, 104, 109, 116, 136, 149
     `);
     let lrEZA2 = parseRanges('1,6-8,12,54');
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 77-79, 80-85, 87-88, 91-93, 96-97, 100, 104
+      60-69, 70-75, 77-79, 80-89, 90-93, 96-97, 100, 104
     `);
     let dfEZA2 = parseRanges('1-11, 13, 14, 15, 17-20, 25-26');
 
     //LR changelog items
     const LRupdateItems = [
-      "AGL Gomah",
-      "AGL Super Garlic Jr"
+      "INT Jackie Chun EZA",
+      "AGL SSJ Future Gohan & Trunks EZA",
+      "INT SSJ Future Gohan/Trunks"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
-    "TEQ SSJ4 Daima Goku",
-    "AGL Android 16"
+    "AGL Kid Gohan EZA",
+    "TEQ Android 17 & 18 EZA",
+    "AGL Future Trunks EZA"
     ]
 
      // Create icons dynamically
