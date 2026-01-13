@@ -219,10 +219,44 @@ left: 145px;
 left:325px;
 }
 
+/* Container for all switches */
+.switch-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: absolute;
+  top: -81px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 330px;
+}
+
+/* Wrapper for each switch + tooltip pair */
+.switch-group {
+  display: flex;
+  align-items: center;
+  height: 20px; /* Fixed height to prevent layout jumps */
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
 .switch input {
-opacity:0;
-width:0;
-height:0;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Adjust tooltip positioning */
+.switch-group .tooltip {
+  margin-left: 10px;
+  white-space: nowrap;
 }
 
 .tooltip, .tooltip3 {

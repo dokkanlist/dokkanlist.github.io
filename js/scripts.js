@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   //global declarations
   let enter = document.getElementById('special');
   let changelogList = document.getElementById('changelog-item');
-  $("#hide-lr").prop("checked", false);
+  $(".switch input").prop("checked", false);
 
   //target elements for animations
   const toggleButton = document.getElementById("toggleButton");
@@ -82,6 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function toggleMode() {
     let newMode = document.body.classList.contains("dfe") ? "lr" : "dfe";
     updateMode(newMode, true); // Save mode change
+    $(".switch input").prop("checked", false);
 
     //coreFunctions must be below loadFlairs
     loadFlairs();
@@ -115,7 +116,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadFlairs = function() {
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
-      82-89, 90-98, 101-102, 104, 109, 116, 136, 149
+      82-89, 90-98, 101-102, 104, 109, 112, 113, 116, 136, 149
     `);
     let lrEZA2 = parseRanges('1,6-8,12,14,54,178');
 
@@ -127,16 +128,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "INT SSJ Future Gohan/Trunks",
       "STR 1000 Day Spirit Bomb Goku Super EZA",
       "STR 4000 Day Spirit Bomb Goku Icon",
+      "PHY Ultimate Gohan EZA",
+      "TEQ Orange Piccolo EZA",
+      "Added EZA toggles"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
     "AGL Future Trunks EZA",
     "STR Gamma 1 EZA",
-    "AGL Gamma 2 EZA"
+    "AGL Gamma 2 EZA",
+    "Added EZA toggles"
     ]
 
      // Create icons dynamically
@@ -299,11 +303,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   //total legend tracker
   function countLegends() {
     let rarity = currentMode === "lr" ? "LRs" : "DFEs";
-    const amount = $(".selected").length;
-    const total = $("#special .flair").length;
-    const disabled = $('.disabled').length;
 
-    $('#counter').html("<span class='cl'>Total "+rarity+" - </span>" + amount + "/" + (total-disabled));
+    // Count only visible and selected icons
+    const visibleSelected = $("#special .flair.selected").filter(function() {
+      return $(this).css('display') !== 'none';
+    }).length;
+
+    // Count total visible icons (not disabled and not hidden by filter)
+    const totalVisible = $("#special .flair").filter(function() {
+      return !$(this).hasClass('disabled') && $(this).css('display') !== 'none';
+    }).length;
+
+    $('#counter').html("<span class='cl'>Total "+rarity+" - </span>" + visibleSelected + "/" + totalVisible);
   }
 
   //unhides specific Legends
@@ -477,6 +488,119 @@ document.addEventListener("DOMContentLoaded", async () => {
     //legend counter
     countLegends();
   }
+
+  // EZA Filter functionality
+function initEZAFilters() {
+  const showEzaOnly = document.getElementById('show-eza-only');
+  const showEza2Only = document.getElementById('show-eza2-only');
+  const showBothEza = document.getElementById('show-both-eza');
+
+  // Store original display values
+  let originalDisplay = new Map();
+
+  // Helper function to reset all filters
+  function resetEZAFilters() {
+    showEzaOnly.checked = false;
+    showEza2Only.checked = false;
+    showBothEza.checked = false;
+
+    // Restore original display values
+    document.querySelectorAll('#special .flair').forEach(flair => {
+      flair.style.display = originalDisplay.get(flair) || '';
+    });
+
+    countLegends();
+  }
+
+  // Helper function to save original state
+  function saveOriginalDisplay() {
+    document.querySelectorAll('#special .flair').forEach(flair => {
+      originalDisplay.set(flair, flair.style.display);
+    });
+  }
+
+  // Helper function to apply filter
+  function applyEZAFilter(filterType) {
+    // Save original state before first filter
+    if (originalDisplay.size === 0) {
+      saveOriginalDisplay();
+    }
+
+    // First, hide all non-disabled icons
+    document.querySelectorAll('#special .flair').forEach(flair => {
+      if (!flair.classList.contains('disabled')) {
+        flair.style.display = 'none';
+      }
+    });
+
+    // Then show only the filtered ones based on new logic
+    switch(filterType) {
+      case 'eza':
+        // Show EZA only = has .eza but NOT .eza2
+        document.querySelectorAll('#special .flair.eza').forEach(flair => {
+          if (!flair.classList.contains('disabled') && !flair.classList.contains('eza2')) {
+            flair.style.display = '';
+          }
+        });
+        break;
+      case 'eza2':
+        // Show Super EZA only = has .eza2 (regardless of also having .eza)
+        document.querySelectorAll('#special .flair.eza2').forEach(flair => {
+          if (!flair.classList.contains('disabled')) {
+            flair.style.display = '';
+          }
+        });
+        break;
+      case 'both':
+        // Show both = has either .eza OR .eza2
+        document.querySelectorAll('#special .flair.eza, #special .flair.eza2').forEach(flair => {
+          if (!flair.classList.contains('disabled')) {
+            flair.style.display = '';
+          }
+        });
+        break;
+    }
+
+    countLegends();
+  }
+
+  // Event listeners for each toggle
+  showEzaOnly.addEventListener('change', function() {
+    if (this.checked) {
+      // Uncheck other filters
+      showEza2Only.checked = false;
+      showBothEza.checked = false;
+      applyEZAFilter('eza');
+    } else {
+      resetEZAFilters();
+    }
+  });
+
+  showEza2Only.addEventListener('change', function() {
+    if (this.checked) {
+      // Uncheck other filters
+      showEzaOnly.checked = false;
+      showBothEza.checked = false;
+      applyEZAFilter('eza2');
+    } else {
+      resetEZAFilters();
+    }
+  });
+
+  showBothEza.addEventListener('change', function() {
+    if (this.checked) {
+      // Uncheck other filters
+      showEzaOnly.checked = false;
+      showEza2Only.checked = false;
+      applyEZAFilter('both');
+    } else {
+      resetEZAFilters();
+    }
+  });
+}
+
+// Call this after coreFunctions()
+initEZAFilters();
 
   //main function for selecting icons
   $("#special").on("click", "div", function(e) {
