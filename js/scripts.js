@@ -116,9 +116,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadFlairs = function() {
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
-      82-89, 90-98, 101-102, 104, 109, 111-113, 116, 136, 149
+      82-89, 90-98, 101-102, 104, 109, 111-113, 116-118, 136, 149
     `);
-    let lrEZA2 = parseRanges('1,6-8,12,14,54,178');
+    let lrEZA2 = parseRanges('1,6-8,11,12,14,54,178');
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
@@ -130,7 +130,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const LRupdateItems = [
       "STR Carnival SSJ Goku EZA",
       "STR SSJ4 Daima Goku",
-      "TEQ SSJ3 Daima Vegeta"
+      "TEQ SSJ3 Daima Vegeta",
+      "INT SSJ Trunks Super EZA",
+      "INT Gohan Kai EZA",
+      "AGL Goku Kai EZA"
     ]
 
     //DFE changelog items
