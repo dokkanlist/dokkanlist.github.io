@@ -122,26 +122,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 77-79, 80-89, 90-93, 96-97, 100-102, 104
+      60-69, 70-75, 77-79, 80-89, 90-93, 96-97, 99, 100-102, 104
     `);
-    let dfEZA2 = parseRanges('1-11, 13, 14, 15, 17-20, 25-26');
+    let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-26');
 
     //LR changelog items
     const LRupdateItems = [
-      "STR Carnival SSJ Goku EZA",
-      "STR SSJ4 Daima Goku",
-      "TEQ SSJ3 Daima Vegeta",
       "INT SSJ Trunks Super EZA",
       "INT Gohan Kai EZA",
-      "AGL Goku Kai EZA"
+      "AGL Goku Kai EZA",
+      "INT SSJ4 Vegeta + Goku",
+      "PHY UI + SSBE"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
-    "AGL Future Trunks EZA",
-    "STR Gamma 1 EZA",
-    "AGL Gamma 2 EZA",
-    "Added EZA toggles"
+    "TEQ Pan EZA",
+    "INT SSB Vegeta Super EZA"
     ]
 
      // Create icons dynamically
