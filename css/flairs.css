@@ -1,6 +1,6 @@
 .lr .flair {
-height:70px;
-width:70px;
+height:76px;
+width:76px;
 cursor:pointer;
 border:3px solid transparent;
 background-clip:padding-box;
@@ -12,6 +12,9 @@ position:relative;
 .flair {
 opacity:0.35;
 filter:alpha(opacity=35);
+position: relative;
+overflow: visible !important;
+z-index: 1;
 }
 
 .flair:not(.selected):hover {
@@ -19,8 +22,8 @@ opacity:0.7;
 }
 
 .flair.selected {
-background-color: rgba(0,0,0,0.3);
-border-radius:10px;
+/*background-color: rgba(0,0,0,0.3);*/
+/*border-radius:10px;*/
 opacity:1;
 }
 
@@ -100,20 +103,19 @@ background-size:contain;
 
 /*--- DFE Section --*/
 .dfe .flair {
-height:70px;
-width:79px;
+height:76px;
+width:76px;
 cursor:pointer;
 border:3px solid transparent;
 background-clip:padding-box;
 background-size: contain;
 display: inline-block;
 background-repeat: no-repeat;
-padding-bottom:2px
 }
 
 @media only screen and (min-width: 1921px) {
   .dfe .flair {
-    height:78px;
+    height:89px;
     width:89px;
   }
   .dfe .eza:before {
@@ -130,7 +132,7 @@ padding-bottom:2px
 
 @media only screen and (max-width: 760px) {
   .dfe .flair {
-    height:48px;
+    height:55px;
     width:55px;
   }
   .dfe .eza:before {
@@ -152,7 +154,7 @@ height: 16px;
 width: 18px;
 background:url(../images/eza.webp);
 position:absolute;
-bottom:0;
+bottom:7px;
 right:4px;
 background-size:contain;
 }
@@ -164,7 +166,7 @@ height: 22px;
 width: 26px;
 background:url(../images/eza2.webp);
 position:absolute;
-bottom:-1px;
+bottom:7px;
 right:3px;
 background-size:contain;
 }

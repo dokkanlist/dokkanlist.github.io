@@ -391,6 +391,7 @@ position:relative;
 border:4px double #c3e7bb;
 border-radius:4px;
 padding-top:10px;
+overflow: visible;
 }
 
 .dfe #icon-container {
@@ -399,6 +400,7 @@ position:relative;
 border:4px double #c3e7bb;
 border-radius:4px;
 padding-top:10px;
+overflow: visible;
 }
 
 .glitch-blur {
@@ -570,4 +572,149 @@ color: #3f87ef;
 .TEQ {
 font-weight: 700;
 color: #68f75b;
+}
+
+/* Type Glow Colors */
+:root {
+  --agl-color: #0579e3;
+  --teq-color: #22a139;
+  --str-color: #c72126;
+  --phy-color: #bd7204;
+  --int-color: #aa46c3;
+}
+
+/* Static Glow */
+.flair.selected.type-agl { filter: drop-shadow(0 0 4px var(--agl-color)) drop-shadow(0 0 5px var(--agl-color)); }
+.flair.selected.type-teq { filter: drop-shadow(0 0 4px var(--teq-color)) drop-shadow(0 0 5px var(--teq-color)); }
+.flair.selected.type-str { filter: drop-shadow(0 0 4px var(--str-color)) drop-shadow(0 0 5px var(--str-color)); }
+.flair.selected.type-phy { filter: drop-shadow(0 0 4px var(--phy-color)) drop-shadow(0 0 5px var(--phy-color)); }
+.flair.selected.type-int { filter: drop-shadow(0 0 4px var(--int-color)) drop-shadow(0 0 5px var(--int-color)); }
+
+/* ═══ Super EZA Lightning Animation ═══ */
+/* ── Base overlay (hidden by default) ── */
+.flair.glow-pulse .lightning-overlay {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  background-repeat: no-repeat;
+  display: none;
+  /* 12-frame strip: 1272×106 */
+  width: 106px;
+  height: 106px;
+  background-size: 1272px 106px;
+}
+
+/* Show + animate only when parent is selected */
+.flair.selected.glow-pulse .lightning-overlay {
+  display: block;
+  animation: lightning-play 0.4s steps(12) infinite;
+}
+
+/* ── Per-type sprites ── */
+.lightning-overlay.lightning-agl { background-image: url('../images/lightning/sprite_agl.png'); }
+.lightning-overlay.lightning-teq { background-image: url('../images/lightning/sprite_teq.png'); }
+.lightning-overlay.lightning-str { background-image: url('../images/lightning/sprite_str.png'); }
+.lightning-overlay.lightning-phy { background-image: url('../images/lightning/sprite_phy.png'); }
+.lightning-overlay.lightning-int { background-image: url('../images/lightning/sprite_int.png'); }
+
+@keyframes lightning-play {
+  from { background-position: 0 0; }
+  to   { background-position: -1272px 0; }
+}
+
+
+/*
+  ═══ Z-INDEX FIX ═══
+*/
+
+.flair.glow-pulse {
+  background-image: none !important;
+}
+
+.flair.glow-pulse::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  background-image: var(--flair-bg);
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.dfe .flair.glow-pulse::after {
+  bottom: -2px;
+}
+
+.flair.glow-pulse::before {
+  z-index: 3;
+}
+
+
+/* ═══ LR Mode ═══ */
+.lr .flair.glow-pulse .lightning-overlay {
+  top: -13px;
+  left: -16px;
+  transform: scale(1.02);
+}
+
+@media only screen and (min-width: 1921px) {
+  .lr .flair.glow-pulse .lightning-overlay {
+    transform: scale(1.236);
+    transform-origin: top left;
+    top: -19px;
+    left: -22px;
+  }
+}
+
+@media only screen and (max-width: 760px) {
+  .lr .flair.glow-pulse .lightning-overlay {
+    transform: scale(0.714);
+    transform-origin: top left;
+    top: -13px;
+    left: -13px;
+  }
+}
+
+
+/* ═══ DFE Mode ═══ */
+.dfe .flair.glow-pulse .lightning-overlay {
+  top: -16px;
+  left: -15px;
+}
+
+@media only screen and (min-width: 1921px) {
+  .dfe .flair.glow-pulse .lightning-overlay {
+    transform: scale(1.177);
+    transform-origin: top left;
+    top: -20px;
+    left: -18px;
+  }
+}
+
+@media only screen and (max-width: 760px) {
+  .dfe .flair.glow-pulse .lightning-overlay {
+    transform: scale(0.736);
+    transform-origin: top left;
+    top: -12px;
+    left: -12px;
+  }
+}
+
+/* ═══ Overflow fix ═══ */
+.flair {
+  position: relative;
+  overflow: visible !important;
+}
+
+#icon-container {
+  overflow: visible;
+}
+
+/* specific selectors for the generated images */
+.capturing .flair.glow-pulse::after {
+  display: none !important;
 }

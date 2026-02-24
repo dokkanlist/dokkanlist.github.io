@@ -114,6 +114,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   //main icons handling
   loadFlairs = function() {
+    // LR type arrays
+    let lrAGL = parseRanges('2,7,12,16,24,34,38-40,46-47,51,60-61,72,87-88,92,98,101,107,118-119,121,124-125,130,135,141,144,155,157,160-161,167,175-176');
+    let lrTEQ = parseRanges('1,9-10,17,20,29,36,42,44-45,53,57,64-65,70,79,82,93,95-96,100,106,110,113,126,129,131,140,143,146,150-151,153-154,171-172,180');
+    let lrSTR = parseRanges('4,8,14,21-22,32-33,35,41,43,52,54,62,67,69,77,80,84-85,90,97,105,111,115,120,128,137,142,148,152,156,164-166,169,174,178-179');
+    let lrPHY = parseRanges('5,11,15,19,23,27-28,31,49,56,59,63,66,68,71,74-75,83,91,94,99,108,112,114,127,133-134,136,145,149,158,162-163,168,182');
+    let lrINT = parseRanges('3,6,13,18,25-26,30,37,48,50,55,58,73,76,78,81,86,89,102-104,109,116-117,122-123,132,138-139,147,159,170,173,177,181');
+
+    // DFE type arrays
+    let dfAGL = parseRanges('4,11,14,20,26,29,44,46,50,53,55,61,66,70,79,86,89,93,97,102,107,114,117,120,124,130,137,139');
+    let dfTEQ = parseRanges('2,10,13,16,23,28,34-35,41,48,51,59-60,68,73,75,80,88,90,99,103,108,111,118,126,133,136');
+    let dfSTR = parseRanges('1,5,9,17,21,25,32,37,42,45,52,62,65,71,74,78,83,87,92,96,101,105,113,115,123,125,131,135,138');
+    let dfPHY = parseRanges('3,7,12,18-19,27,33,36,39,47,49,56,58,63,69,76,81,84,91,95,100,106,110,119,122,128-129,134');
+    let dfINT = parseRanges('6,8,15,22,24,30-31,38,40,43,54,57,64,67,72,77,82,85,94,98,104,109,112,116,121,127,132');
+
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
       82-89, 90-98, 101-102, 104, 109, 111-113, 116-118, 136, 149
@@ -165,6 +179,39 @@ document.addEventListener("DOMContentLoaded", async () => {
       dfEZA.forEach(id => document.getElementById(id+'b')?.classList.add('eza'));
       dfEZA2.forEach(id => document.getElementById(id+'b')?.classList.add('eza2'));
     }
+
+    // Assign type glow classes
+    if (currentMode === "lr") {
+      lrAGL.forEach(id => document.getElementById(id)?.classList.add('type-agl'));
+      lrTEQ.forEach(id => document.getElementById(id)?.classList.add('type-teq'));
+      lrSTR.forEach(id => document.getElementById(id)?.classList.add('type-str'));
+      lrPHY.forEach(id => document.getElementById(id)?.classList.add('type-phy'));
+      lrINT.forEach(id => document.getElementById(id)?.classList.add('type-int'));
+      lrEZA2.forEach(id => document.getElementById(id)?.classList.add('glow-pulse'));
+    } else {
+      dfAGL.forEach(id => document.getElementById(id+'b')?.classList.add('type-agl'));
+      dfTEQ.forEach(id => document.getElementById(id+'b')?.classList.add('type-teq'));
+      dfSTR.forEach(id => document.getElementById(id+'b')?.classList.add('type-str'));
+      dfPHY.forEach(id => document.getElementById(id+'b')?.classList.add('type-phy'));
+      dfINT.forEach(id => document.getElementById(id+'b')?.classList.add('type-int'));
+      dfEZA2.forEach(id => document.getElementById(id+'b')?.classList.add('glow-pulse'));
+    }
+
+    // Add lightning overlay to Super EZA (glow-pulse) icons
+    document.querySelectorAll('.flair.glow-pulse').forEach(el => {
+      const type = ['agl','teq','str','phy','int'].find(t => el.classList.contains('type-' + t));
+      if (!type) return;
+      if (el.querySelector('.lightning-overlay')) return;
+
+      // Capture the icon's background-image into a CSS variable
+      // so ::after can display it (CSS will hide the original)
+      const bg = el.style.backgroundImage || getComputedStyle(el).backgroundImage;
+      el.style.setProperty('--flair-bg', bg);
+
+      const overlay = document.createElement('div');
+      overlay.className = `lightning-overlay lightning-${type}`;
+      el.appendChild(overlay);
+    });
 
     // Append changelog items
     const types = ["AGL", "INT", "STR", "TEQ", "PHY"];
@@ -286,11 +333,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // remove all selections on SELECTED page
   function resetPage() {
-      // Get the current mode from localStorage
       const currentMode = localStorage.getItem("dokkanMode");
-
-      // Iterate through localStorage and remove only relevant keys
       Object.keys(localStorage).forEach(key => {
+          // Skip non-icon keys
+          const numericPart = key.replace(/b$/, '');
+          if (isNaN(numericPart)) return;
+
           if ((currentMode === "lr" && !key.endsWith("b")) || (currentMode === "dfe" && key.endsWith("b"))) {
               localStorage.removeItem(key);
               $("#" + key).removeClass("selected disabled");
@@ -380,47 +428,98 @@ document.addEventListener("DOMContentLoaded", async () => {
      }
   }
 
-  //export image function
+  // ═══ Image Export Helpers ═══
+  //
+  // Problem: ::after with var(--flair-bg) doesn't render in html-to-image.
+  // Solution: Temporarily inject an <img> element inside .glow-pulse flairs
+  // that sits above the lightning overlay (z-index: 1), replicating what
+  // ::after does on the live page. Remove it after capture.
+
+  function prepareForCapture() {
+    document.querySelectorAll('.flair.glow-pulse').forEach(el => {
+      const bg = el.style.getPropertyValue('--flair-bg');
+      if (!bg) return;
+
+      // Extract URL from the var value, e.g. url("...") or url(...)
+      const urlMatch = bg.match(/url\(["']?(.+?)["']?\)/);
+      if (!urlMatch) return;
+
+      // Create an img element that covers the flair and sits above lightning
+      const img = document.createElement('img');
+      img.src = urlMatch[1];
+      img.className = 'capture-icon-img';
+      img.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+        object-fit: contain;
+      `;
+      el.appendChild(img);
+    });
+
+    // Hide ::after (the img replaces it)
+    document.documentElement.classList.add('capturing');
+  }
+
+  function restoreAfterCapture() {
+    // Remove injected img elements
+    document.querySelectorAll('.capture-icon-img').forEach(img => img.remove());
+
+    // Restore ::after
+    document.documentElement.classList.remove('capturing');
+  }
+
+  // ═══ Export Image Function ═══
   function generateImage() {
     toggleModal('image-modal');
     $(".modal-content").empty();
 
     const node = document.getElementById('icon-container');
 
+    prepareForCapture();
+
     htmlToImage.toPng(node, {
-      pixelRatio: 3, // Increase for sharper output (e.g., 2x or 3x)
+      pixelRatio: 3,
       skipFonts: true,
       skipAutoScale: false,
       style: {
-        transform: 'scale(1)', // Prevent distortion
+        transform: 'scale(1)',
         transformOrigin: 'top left'
       }
     })
     .then(function (dataUrl) {
+      restoreAfterCapture();
       const img = new Image();
       img.src = dataUrl;
-      img.style.width = node.offsetWidth + "px"; // Display at natural size
+      img.style.width = node.offsetWidth + "px";
       img.style.height = node.offsetHeight + "px";
       $(".modal-content").append(img);
     })
     .catch(function (error) {
+      restoreAfterCapture();
       console.error('Image generation failed:', error);
     });
   }
 
-  //download feature
+  // ═══ Download Function ═══
   function download() {
     const node = document.getElementById('icon-container');
 
+    prepareForCapture();
+
     htmlToImage.toBlob(node, {
-      pixelRatio: 3, // Higher = sharper image
+      pixelRatio: 3,
       skipFonts: true,
       filter: (node) => {
-        // Avoid extension styles and cross-origin errors
         return !(node.tagName === 'LINK' && node.href && node.href.startsWith('moz-extension://'));
       }
     })
     .then(function (blob) {
+      restoreAfterCapture();
       if (blob) {
         window.saveAs(blob, 'checklist.png');
       } else {
@@ -428,6 +527,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     })
     .catch(function (error) {
+      restoreAfterCapture();
       console.error('Download failed:', error);
     });
   }
