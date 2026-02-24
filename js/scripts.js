@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 77-79, 80-89, 90-93, 96-97, 99, 100-102, 104
+      60-69, 70-75, 77-79, 80-89, 90-93, 96-99, 100-102, 104
     `);
     let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-26');
 
@@ -152,7 +152,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     //DFE changelog items
     const DFEupdateItems = [
     "TEQ Pan EZA",
-    "INT SSB Vegeta Super EZA"
+    "INT SSB Vegeta Super EZA",
+    "INT RoF SSB Goku & Vegeta EZA"
     ]
 
      // Create icons dynamically
