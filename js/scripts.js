@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
-      82-89, 90-98, 101-102, 104, 109, 111-113, 116-118, 136, 149
+      82-89, 90-98, 101-102, 104, 109, 111-118, 136, 149
     `);
     let lrEZA2 = parseRanges('1,6-8,11,12,14,54,178');
 
@@ -142,11 +142,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "INT SSJ Trunks Super EZA",
-      "INT Gohan Kai EZA",
-      "AGL Goku Kai EZA",
       "INT SSJ4 Vegeta + Goku",
-      "PHY UI + SSBE"
+      "PHY UI + SSBE",
+      "PHY SSJ3 Goku & SSJ2 Vegeta EZA",
+      "STR GT Goku & SSJ4 Vegeta EZA"
     ]
 
     //DFE changelog items
