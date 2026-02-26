@@ -588,76 +588,86 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // EZA Filter functionality
-function initEZAFilters() {
-  const showEzaOnly = document.getElementById('show-eza-only');
-  const showEza2Only = document.getElementById('show-eza2-only');
-  const showBothEza = document.getElementById('show-both-eza');
+    function initEZAFilters() {
+      const showEzaOnly = document.getElementById('show-eza-only');
+      const showEza2Only = document.getElementById('show-eza2-only');
+      const showBothEza = document.getElementById('show-both-eza');
+      const showNoEza = document.getElementById('show-no-eza');
 
-  // Store original display values
-  let originalDisplay = new Map();
+      // Store original display values
+      let originalDisplay = new Map();
 
-  // Helper function to reset all filters
-  function resetEZAFilters() {
-    showEzaOnly.checked = false;
-    showEza2Only.checked = false;
-    showBothEza.checked = false;
+      // Helper function to reset all filters
+      function resetEZAFilters() {
+        showEzaOnly.checked = false;
+        showEza2Only.checked = false;
+        showBothEza.checked = false;
+        showNoEza.checked = false;
 
-    // Restore original display values
-    document.querySelectorAll('#special .flair').forEach(flair => {
-      flair.style.display = originalDisplay.get(flair) || '';
-    });
+        // Restore original display values
+        document.querySelectorAll('#special .flair').forEach(flair => {
+          flair.style.display = originalDisplay.get(flair) || '';
+        });
 
-    countLegends();
-  }
-
-  // Helper function to save original state
-  function saveOriginalDisplay() {
-    document.querySelectorAll('#special .flair').forEach(flair => {
-      originalDisplay.set(flair, flair.style.display);
-    });
-  }
-
-  // Helper function to apply filter
-  function applyEZAFilter(filterType) {
-    // Save original state before first filter
-    if (originalDisplay.size === 0) {
-      saveOriginalDisplay();
-    }
-
-    // First, hide all non-disabled icons
-    document.querySelectorAll('#special .flair').forEach(flair => {
-      if (!flair.classList.contains('disabled')) {
-        flair.style.display = 'none';
+        countLegends();
       }
-    });
 
-    // Then show only the filtered ones based on new logic
-    switch(filterType) {
-      case 'eza':
-        // Show EZA only = has .eza but NOT .eza2
-        document.querySelectorAll('#special .flair.eza').forEach(flair => {
-          if (!flair.classList.contains('disabled') && !flair.classList.contains('eza2')) {
-            flair.style.display = '';
-          }
+      // Helper function to save original state
+      function saveOriginalDisplay() {
+        document.querySelectorAll('#special .flair').forEach(flair => {
+          originalDisplay.set(flair, flair.style.display);
         });
-        break;
-      case 'eza2':
-        // Show Super EZA only = has .eza2 (regardless of also having .eza)
-        document.querySelectorAll('#special .flair.eza2').forEach(flair => {
+      }
+
+      // Helper function to apply filter
+      function applyEZAFilter(filterType) {
+        // Save original state before first filter
+        if (originalDisplay.size === 0) {
+          saveOriginalDisplay();
+        }
+
+        // First, hide all non-disabled icons
+        document.querySelectorAll('#special .flair').forEach(flair => {
           if (!flair.classList.contains('disabled')) {
-            flair.style.display = '';
+            flair.style.display = 'none';
           }
         });
-        break;
-      case 'both':
-        // Show both = has either .eza OR .eza2
-        document.querySelectorAll('#special .flair.eza, #special .flair.eza2').forEach(flair => {
-          if (!flair.classList.contains('disabled')) {
-            flair.style.display = '';
-          }
-        });
-        break;
-    }
+
+        // Then show only the filtered ones
+        switch(filterType) {
+          case 'eza':
+            // Show EZA only = has .eza but NOT .eza2
+            document.querySelectorAll('#special .flair.eza').forEach(flair => {
+              if (!flair.classList.contains('disabled') && !flair.classList.contains('eza2')) {
+                flair.style.display = '';
+              }
+            });
+            break;
+          case 'eza2':
+            // Show Super EZA only = has .eza2
+            document.querySelectorAll('#special .flair.eza2').forEach(flair => {
+              if (!flair.classList.contains('disabled')) {
+                flair.style.display = '';
+              }
+            });
+            break;
+          case 'both':
+            // Show both = has either .eza OR .eza2
+            document.querySelectorAll('#special .flair.eza, #special .flair.eza2').forEach(flair => {
+              if (!flair.classList.contains('disabled')) {
+                flair.style.display = '';
+              }
+            });
+            break;
+          case 'none':
+            // Show non-EZA only = has neither .eza nor .eza2
+            document.querySelectorAll('#special .flair').forEach(flair => {
+              if (!flair.classList.contains('disabled') && !flair.classList.contains('eza') && !flair.classList.contains('eza2')) {
+                flair.style.display = '';
+              }
+            });
+            break;
+        }
 
     countLegends();
   }
@@ -668,6 +678,7 @@ function initEZAFilters() {
       // Uncheck other filters
       showEza2Only.checked = false;
       showBothEza.checked = false;
+      showNoEza.checked = false;
       applyEZAFilter('eza');
     } else {
       resetEZAFilters();
@@ -679,6 +690,7 @@ function initEZAFilters() {
       // Uncheck other filters
       showEzaOnly.checked = false;
       showBothEza.checked = false;
+      showNoEza.checked = false;
       applyEZAFilter('eza2');
     } else {
       resetEZAFilters();
@@ -690,7 +702,20 @@ function initEZAFilters() {
       // Uncheck other filters
       showEzaOnly.checked = false;
       showEza2Only.checked = false;
+      showNoEza.checked = false;
       applyEZAFilter('both');
+    } else {
+      resetEZAFilters();
+    }
+  });
+
+  showNoEza.addEventListener('change', function() {
+    if (this.checked) {
+      // Uncheck other filters
+      showEzaOnly.checked = false;
+      showEza2Only.checked = false;
+      showBothEza.checked = false;
+      applyEZAFilter('none');
     } else {
       resetEZAFilters();
     }
