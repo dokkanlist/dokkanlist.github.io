@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 77-79, 80-89, 90-94, 96-99, 100-102, 104
+      60-69, 70-75, 77-79, 80-89, 90-102, 104
     `);
     let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-26, 43');
 
@@ -150,9 +150,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //DFE changelog items
     const DFEupdateItems = [
-    "INT UI Goku Super EZA",
     "TEQ Dabura",
-    "INT Majin Vegeta EZA"
+    "INT Majin Vegeta EZA",
+    "AGL Vegeta + Nappa",
+    "PHY Raditz EZA"
     ]
 
      // Create icons dynamically
