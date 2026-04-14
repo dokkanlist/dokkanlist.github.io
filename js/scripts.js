@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // LR type arrays
     let lrAGL = parseRanges('2,7,12,16,24,34,38-40,46-47,51,60-61,72,87-88,92,98,101,107,118-119,121,124-125,130,135,141,144,155,157,160-161,167,175-176');
     let lrTEQ = parseRanges('1,9-10,17,20,29,36,42,44-45,53,57,64-65,70,79,82,93,95-96,100,106,110,113,126,129,131,140,143,146,150-151,153-154,171-172,180');
-    let lrSTR = parseRanges('4,8,14,21-22,32-33,35,41,43,52,54,62,67,69,77,80,84-85,90,97,105,111,115,120,128,137,142,148,152,156,164-166,169,174,178-179');
+    let lrSTR = parseRanges('4,8,14,21-22,32-33,35,41,43,52,54,62,67,69,77,80,84-85,90,97,105,111,115,120,128,137,142,148,152,156,164-166,169,174,178-179,184');
     let lrPHY = parseRanges('5,11,15,19,23,27-28,31,49,56,59,63,66,68,71,74-75,83,91,94,99,108,112,114,127,133-134,136,145,149,158,162-163,168,182-183');
     let lrINT = parseRanges('3,6,13,18,25-26,30,37,48,50,55,58,73,76,78,81,86,89,102-104,109,116-117,122-123,132,138-139,147,159,170,173,177,181');
 
@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
-      82-89, 90-98, 101-102, 104, 109, 111-118, 136, 149
+      82-89, 90-99, 101-102, 104, 109, 111-118, 136, 149
     `);
     let lrEZA2 = parseRanges('1,6-8,11,12,14,54,116,178');
 
@@ -142,10 +142,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "PHY SSJ3 Goku & SSJ2 Vegeta EZA",
-      "STR GT Goku & SSJ4 Vegeta EZA",
-      "INT Babidi Super EZA",
-      "PHY Majin Vegeta"
+      "PHY Majin Vegeta",
+      "PHY Goku & Piccolo EZA",
+      "STR Piccolo"
     ]
 
     //DFE changelog items
