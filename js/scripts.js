@@ -122,17 +122,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     let lrINT = parseRanges('3,6,13,18,25-26,30,37,48,50,55,58,73,76,78,81,86,89,102-104,109,116-117,122-123,132,138-139,147,159,170,173,177,181');
 
     // DFE type arrays
-    let dfAGL = parseRanges('4,11,14,20,26,29,44,46,50,53,55,61,66,70,79,86,89,93,97,102,107,114,117,120,124,130,137,139,141');
+    let dfAGL = parseRanges('4,11,14,20,26,29,44,46,50,53,55,61,66,70,79,86,89,93,97,102,107,114,117,120,124,130,137,139,141-142');
     let dfTEQ = parseRanges('2,10,13,16,23,28,34-35,41,48,51,59-60,68,73,75,80,88,90,99,103,108,111,118,126,133,136,140');
     let dfSTR = parseRanges('1,5,9,17,21,25,32,37,42,45,52,62,65,71,74,78,83,87,92,96,101,105,113,115,123,125,131,135,138');
     let dfPHY = parseRanges('3,7,12,18-19,27,33,36,39,47,49,56,58,63,69,76,81,84,91,95,100,106,110,119,122,128-129,134');
-    let dfINT = parseRanges('6,8,15,22,24,30-31,38,40,43,54,57,64,67,72,77,82,85,94,98,104,109,112,116,121,127,132');
+    let dfINT = parseRanges('6,8,15,22,24,30-31,38,40,43,54,57,64,67,72,77,82,85,94,98,104,109,112,116,121,127,132,143');
 
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
       82-89, 90-99, 101-102, 104, 109, 111-118, 136, 149
     `);
-    let lrEZA2 = parseRanges('1,6-8,11,12,14,54,116,178');
+    let lrEZA2 = parseRanges('1,6-8,11,12,14,22,54,116,178');
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
@@ -142,18 +142,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "PHY Majin Vegeta",
-      "PHY Goku & Piccolo EZA",
-      "STR Piccolo",
-      "STR SSG Ultra Supervillain Vegeta"
+      "STR SSG Ultra Supervillain Vegeta",
+      "STR Beerus & Whis Super EZA"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
-    "TEQ Dabura",
-    "INT Majin Vegeta EZA",
-    "AGL Vegeta + Nappa",
-    "PHY Raditz EZA"
+    "AGL SSG Goku",
+    "INT Beerus"
     ]
 
      // Create icons dynamically
