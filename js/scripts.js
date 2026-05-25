@@ -140,11 +140,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     `);
     let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-26, 43');
 
+    let lrAltArt = [14]
+    let dfAltArt = [106, 120]
+
     //LR changelog items
     const LRupdateItems = [
       "STR SSG Ultra Supervillain Vegeta",
       "STR Beerus & Whis Super EZA",
-      "TEQ Frontier Goku"
+      "TEQ Frontier Goku",
+      "Added alt art toggle"
     ]
 
     //DFE changelog items
@@ -152,7 +156,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     "AGL SSG Goku",
     "INT Beerus",
     "PHY SSG Goku EZA + Alt Art",
-    "AGL SSJ3 Goku Alt Art"
+    "AGL SSJ3 Goku Alt Art",
+    "Added alt art toggle"
     ]
 
      // Create icons dynamically
@@ -213,6 +218,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       el.appendChild(overlay);
     });
 
+    // Mark icons that have alt art available
+    const altArtIds = currentMode === "lr" ? lrAltArt : dfAltArt;
+    altArtIds.forEach(id => {
+      const el = document.getElementById(id + flaircheck);
+      if (el) el.classList.add('has-alt');
+    });
+
+    // Apply alt art if toggle is on
+    const altArtEnabled = localStorage.getItem('dokkanAltArt') === 'true';
+    document.getElementById('show-alt-art').checked = altArtEnabled;
+    if (altArtEnabled) applyAltArt(true);
+
     // Append changelog items
     const types = ["AGL", "INT", "STR", "TEQ", "PHY"];
     let updateItems = currentMode === "lr" ? LRupdateItems : DFEupdateItems;
@@ -256,8 +273,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     fetchLatestCommitDate();
   }
 
+  function applyAltArt(showAlt) {
+  const folder = currentMode === "dfe" ? "images/dfe" : "images/lr";
+
+  document.querySelectorAll('#special .flair.has-alt').forEach(el => {
+    // Get the numeric ID from the element
+    const id = el.id.replace('b', '');
+    const suffix = showAlt ? '_alt' : '';
+    const newBg = `url(../` + folder + `/icons/${id}${suffix}.webp)`;
+
+    el.style.backgroundImage = newBg;
+
+    // Update the --flair-bg variable if this is a glow-pulse icon
+    // (needed for the ::after z-index trick on super EZA icons)
+    if (el.classList.contains('glow-pulse')) {
+      el.style.setProperty('--flair-bg', newBg);
+    }
+  });
+}
+
+function initAltArtToggle() {
+  const toggle = document.getElementById('show-alt-art');
+  toggle.addEventListener('change', function() {
+    localStorage.setItem('dokkanAltArt', this.checked);
+    applyAltArt(this.checked);
+  });
+}
+
   //coreFunctions must be below loadFlairs
   loadFlairs();
+  initAltArtToggle();
   coreFunctions();
 
   // <----------------------------------------------------------------->
