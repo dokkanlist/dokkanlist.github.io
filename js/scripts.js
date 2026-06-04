@@ -138,7 +138,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
       60-69, 70-75, 77-79, 80-89, 90-102, 104, 106
     `);
-    let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-26, 43');
+    let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-27, 43');
 
     let lrAltArt = [14]
     let dfAltArt = [106, 120]
@@ -158,7 +158,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     "PHY SSG Goku EZA + Alt Art",
     "AGL SSJ3 Goku Alt Art",
     "Added alt art toggle",
-    "TEQ Metal Cooler Army"
+    "TEQ Metal Cooler Army",
+    "PHY Cooler Super EZA"
     ]
 
      // Create icons dynamically
