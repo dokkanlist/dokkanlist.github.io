@@ -148,6 +148,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "STR SSG Ultra Supervillain Vegeta",
       "STR Beerus & Whis Super EZA",
       "TEQ Frontier Goku",
+      "TEQ Turles",
       "Added alt art toggle"
     ]
 
