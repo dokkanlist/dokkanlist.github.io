@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadFlairs = function() {
     // LR type arrays
     let lrAGL = parseRanges('2,7,12,16,24,34,38-40,46-47,51,60-61,72,87-88,92,98,101,107,118-119,121,124-125,130,135,141,144,155,157,160-161,167,175-176');
-    let lrTEQ = parseRanges('1,9-10,17,20,29,36,42,44-45,53,57,64-65,70,79,82,93,95-96,100,106,110,113,126,129,131,140,143,146,150-151,153-154,171-172,179,185-186');
+    let lrTEQ = parseRanges('1,9-10,17,20,29,36,42,44-45,53,57,64-65,70,79,82,93,95-96,100,106,110,113,126,129,131,140,143,146,150-151,153-154,171-172,179,185-187');
     let lrSTR = parseRanges('4,8,14,21-22,32-33,35,41,43,52,54,62,67,69,77,80,84-85,90,97,105,111,115,120,128,137,142,148,152,156,164-166,169,174,178,183-184');
     let lrPHY = parseRanges('5,11,15,19,23,27-28,31,49,56,59,63,66,68,71,74-75,83,91,94,99,108,112,114,127,133-134,136,145,149,158,162-163,168,181-182');
     let lrINT = parseRanges('3,6,13,18,25-26,30,37,48,50,55,58,73,76,78,81,86,89,102-104,109,116-117,122-123,132,138-139,147,159,170,173,177,180');
@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 77-79, 80-89, 90-102, 104, 106
+      60-69, 70-75, 77-79, 80-89, 90-102, 104, 106, 110
     `);
     let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-27, 43');
 
@@ -145,22 +145,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "STR SSG Ultra Supervillain Vegeta",
-      "STR Beerus & Whis Super EZA",
-      "TEQ Frontier Goku",
       "TEQ Turles",
-      "Added alt art toggle"
+      "TEQ Beast Gohan"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
-    "AGL SSG Goku",
-    "INT Beerus",
-    "PHY SSG Goku EZA + Alt Art",
-    "AGL SSJ3 Goku Alt Art",
-    "Added alt art toggle",
-    "TEQ Metal Cooler Army",
-    "PHY Cooler Super EZA"
+    "PHY Turles EZA"
     ]
 
      // Create icons dynamically
