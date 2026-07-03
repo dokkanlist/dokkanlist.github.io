@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
       82-89, 90-99, 101-102, 104, 109, 111-118, 136, 149
     `);
-    let lrEZA2 = parseRanges('1,6-8,11,12,14,22,54,116');
+    let lrEZA2 = parseRanges('1,6-8,11,12,14,22,54,105-106,116');
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
@@ -146,7 +146,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     //LR changelog items
     const LRupdateItems = [
       "TEQ Turles",
-      "TEQ Beast Gohan"
+      "TEQ Beast Gohan",
+      "TEQ Carnival SSJ Goku EZA",
+      "STR Cooler EZA"
     ]
 
     //DFE changelog items
