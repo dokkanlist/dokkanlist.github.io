@@ -1,24 +1,3 @@
-// loads a count of icons in each folder from the pre-generated JSON file
-let iconCounts = { lr: 187, dfe: 144 }; // Default fallback values - automatically updated by nodeJS
-
-async function loadIconCounts() {
-  try {
-    const response = await fetch('./js/iconCounts.json');
-    if (!response.ok) throw new Error('Could not load iconCounts.json');
-
-    const data = await response.json();
-    iconCounts = { lr: data.lr, dfe: data.dfe };
-
-    console.log('Loaded icon counts:', iconCounts);
-    console.log(`   Generated: ${new Date(data.generated).toLocaleString()}`);
-
-    return iconCounts;
-  } catch (error) {
-    console.warn('Using fallback icon counts:', error.message);
-    return iconCounts; // Return defaults
-  }
-}
-
 // helper function for parsing ranges in arrays
 function parseRanges(rangeString) {
   const result = [];
@@ -40,9 +19,6 @@ function parseRanges(rangeString) {
 
 // Ensure button is loaded before adding event listener
 document.addEventListener("DOMContentLoaded", async () => {
-  // load counts before initialization
-  await loadIconCounts();
-
   //global declarations
   let enter = document.getElementById('special');
   let changelogList = document.getElementById('changelog-item');
@@ -158,7 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
      // Create icons dynamically
      // number format - LR : DFE
-    let total = currentMode === "lr" ? iconCounts.lr : iconCounts.dfe
+    let total = currentMode === "lr" ? 187 : 144
     let flaircheck = currentMode === "dfe" ? "b" : "";
 
     // MAIN FLAIR CREATION LOOP
