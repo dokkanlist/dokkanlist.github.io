@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let dfAGL = parseRanges('4,11,14,20,26,29,44,46,50,53,55,61,66,70,79,86,89,93,97,102,107,114,117,120,124,130,137,139,141-142');
     let dfTEQ = parseRanges('2,10,13,16,23,28,34-35,41,48,51,59-60,68,73,75,80,88,90,99,103,108,111,118,126,133,136,140,144');
     let dfSTR = parseRanges('1,5,9,17,21,25,32,37,42,45,52,62,65,71,74,78,83,87,92,96,101,105,113,115,123,125,131,135,138');
-    let dfPHY = parseRanges('3,7,12,18-19,27,33,36,39,47,49,56,58,63,69,76,81,84,91,95,100,106,110,119,122,128-129,134');
+    let dfPHY = parseRanges('3,7,12,18-19,27,33,36,39,47,49,56,58,63,69,76,81,84,91,95,100,106,110,119,122,128-129,134,145');
     let dfINT = parseRanges('6,8,15,22,24,30-31,38,40,43,54,57,64,67,72,77,82,85,94,98,104,109,112,116,121,127,132,143');
 
     let lrEZA = parseRanges(`
@@ -112,7 +112,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 77-79, 80-89, 90-102, 104, 106, 110
+      60-69, 70-75, 77-79, 80-89, 90-102, 104, 106, 110, 115-116
     `);
     let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-27, 43');
 
@@ -131,12 +131,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //DFE changelog items
     const DFEupdateItems = [
-    "PHY Turles EZA"
+    "PHY Turles EZA",
+    "INT Hirudegarn EZA",
+    "STR SSJ3 Goku EZA",
+    "PHY SSJ3 Daima Goku"
     ]
 
      // Create icons dynamically
      // number format - LR : DFE
-    let total = currentMode === "lr" ? 189 : 144
+    let total = currentMode === "lr" ? 189 : 145
     let flaircheck = currentMode === "dfe" ? "b" : "";
 
     // MAIN FLAIR CREATION LOOP
