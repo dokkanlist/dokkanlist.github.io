@@ -106,13 +106,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let lrEZA = parseRanges(`
       1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
-      82-89, 90-99, 101-109, 111-118, 136, 149
+      82-89, 90-99, 101-109, 111-118, 132, 136, 149
     `);
     let lrEZA2 = parseRanges('1,6-8,11,12,14,22,54,116');
 
     let dfEZA = parseRanges(`
       1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 77-79, 80-89, 90-102, 104, 106, 110, 115-116
+      60-69, 70-75, 77-79, 80-89, 90-102, 104, 106, 110, 114-116
     `);
     let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-27, 43');
 
@@ -121,20 +121,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     //LR changelog items
     const LRupdateItems = [
-      "TEQ Carnival SSJ Goku EZA",
-      "STR Cooler EZA",
-      "INT Luud",
-      "AGL Cell Max",
       "AGL SSJ Goku & Vegeta EZA",
-      "PHY Metal Cooler EZA"
+      "PHY Metal Cooler EZA",
+      "INT SSJ Goku & Vegeta & Trunks EZA"
     ]
 
     //DFE changelog items
     const DFEupdateItems = [
-    "PHY Turles EZA",
-    "INT Hirudegarn EZA",
     "STR SSJ3 Goku EZA",
-    "PHY SSJ3 Daima Goku"
+    "PHY SSJ3 Daima Goku",
+    "AGL Android 21 EZA"
     ]
 
      // Create icons dynamically
