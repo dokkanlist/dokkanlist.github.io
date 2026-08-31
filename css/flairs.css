@@ -27,10 +27,6 @@ opacity:0.7;
 opacity:1;
 }
 
-#show-base {
-  display: none;
-}
-
 @media only screen and (min-width: 1921px) {
   .lr .flair {
     height:90px;
@@ -69,7 +65,7 @@ opacity:1;
   }
 }
 
-.disabled, .hidden {
+.disabled {
   display: none!important;
 }
 

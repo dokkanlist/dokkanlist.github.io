@@ -54,7 +54,11 @@ transform: rotateY(0deg); /* Complete the flip */
 .buttons {
 display:block;
 position:relative;
-margin-top:10px;
+/* Same width box as .container2 so the toggle row on the left lines up with
+   the grid's edge instead of the page's. No `width:100%` here - auto width
+   already fills the space, and 100% would fight the mobile side padding. */
+max-width:var(--content-max);
+margin:10px auto 0;
 }
 
 #image-download {
@@ -195,42 +199,6 @@ outline: 1px solid #caecff;
 outline-offset: 1px
 }
 
-to {
-top:0;
-opacity:1;
-}
-
-.switch,.switch2,.switch3 {
-position:relative;
-display:inline-block;
-bottom:-10px;
-left:20px;
-width:30px;
-height:18px;
-}
-
-/*super rainbow toggle*/
-.switch3 {
-left: 145px;
-}
-
-/*remove legend toggle*/
-.switch2 {
-left:325px;
-}
-
-/* Container for all switches */
-.switch-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: absolute;
-  top: -111px;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-left: 330px;
-}
-
 /* Wrapper for each switch + tooltip pair */
 .switch-group {
   display: flex;
@@ -259,7 +227,7 @@ left:325px;
   white-space: nowrap;
 }
 
-.tooltip, .tooltip3 {
+.tooltip {
 position:relative;
 left:20px;
 bottom:-6px;
@@ -267,23 +235,10 @@ color:#eee;
 font-size:13px;
 font-weight:500;
 text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+cursor:pointer;
 }
 
-.tooltip2 {
-position:absolute;
-left:360px;
-top:-27px;
-color:#eee;
-font-size:13px;
-font-weight:500;
-text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.tooltip3 {
-left:180px;
-}
-
-.slider, .slider2 {
+.slider {
 position:absolute;
 cursor:pointer;
 top:0;
@@ -324,14 +279,6 @@ input:checked + .slider:before {
 transform:translateX(11px);
 }
 
-.slider.round {
-border-radius:34px;
-}
-
-.slider.round:before {
-border-radius:50%;
-}
-
 #show-alt-art {
   appearance: none;
   -webkit-appearance: none;
@@ -358,18 +305,45 @@ border-radius:50%;
   font-weight: bold;
 }
 
-.container2 .switch-group {
-position:absolute;
-top:-25px;
+/* The toggles and the action buttons share one row. A 1fr/auto/1fr grid keeps
+   the buttons centred on the page while the toggles sit hard left, and because
+   they are in separate grid columns they cannot overlap at any width - which a
+   plain absolute-left placement would, since the centred button row reaches
+   further left than the toggles end on windows under ~1200px. When the first
+   column gets too narrow the toggles simply wrap onto a second line. */
+.controls-row {
+display:grid;
+/* minmax(0,1fr), not 1fr: a plain 1fr floors at its content width, so the
+   toggle column would grow and shove the centre column off-centre. */
+grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+align-items:center;
+column-gap:12px;
+margin-top:10px;
+}
+
+.toggle-row {
+grid-column:1;
+justify-self:start;
+display:flex;
+flex-wrap:wrap;
+align-items:center;
+gap:6px 22px;
+max-width:100%;
+}
+
+/* The two controls look different by design - a checkbox and a slider - so the
+   tooltip offsets are normalised here rather than per-control. */
+.toggle-row .tooltip {
 left:0;
+bottom:0;
+margin-left:8px;
 }
 
-.container2 .switch-group .tooltip {
-left:-2px;
-top:-2px;
+.main-buttons {
+grid-column:2;
 }
 
-#counter,#rainbow,#counter2,#srainbow {
+#counter {
 display:inline-block;
 color:#eee;
 font-weight:500;
@@ -378,6 +352,20 @@ font-size:14px;
 
 .cl {
 color:#76e6fe;
+}
+
+/* Per-type progress, on its own line under the total */
+.type-breakdown {
+display:flex;
+flex-wrap:wrap;
+justify-content:center;
+gap:12px;
+margin-top:4px;
+}
+
+.type-breakdown span {
+font-size:13px;
+text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 #select-none {
@@ -391,35 +379,34 @@ color: #1e0b04;
 background-color:#ff3c3c;
 }
 
-#show-hidden {
-border:1px solid #fff;
+/* One shared box for both logos. The height is the taller of the two pieces of
+   art (LR 157px, DFE 151px) and the art is pinned to the top, so neither logo
+   moves but both modes reserve the same height - otherwise everything below
+   sits 6px lower on the LR side. Only the margin below needs tuning. */
+#header {
+height:157px;
+margin:20px auto 8px;
+background-repeat:no-repeat;
+background-position:center top;
+transition: transform 0.3s;
+transform-style: preserve-3d;
+backface-visibility: hidden;
 }
 
 .lr #header {
 background-image:url(../images/lr/header.webp);
 width:335px;
-height:157px;
-margin:20px auto 10px;
-transition: transform 0.3s;
-transform-style: preserve-3d;
-backface-visibility: hidden;
 }
 
 .dfe #header {
 background-image:url(../images/dfe/header.webp);
 width:325px;
-height:151px;
-margin:20px auto;
-transition: transform 0.3s;
-transform-style: preserve-3d;
-backface-visibility: hidden;
 }
 
 .container2 {
 position:relative;
-width:100%;
-max-width:1750px;
-margin:10px auto -40px;
+max-width:var(--content-max);
+margin:8px auto -40px;
 }
 
 .lr #icon-container {
@@ -465,7 +452,7 @@ footer div a {
 color:#ffeb7d;
 }
 
-#hide-legends,button {
+button {
 cursor:pointer;
 background:#010e00;
 color:#7dff51;
@@ -518,14 +505,7 @@ width: 70px;
 border-radius: 7px;
 }
 
-div.btn-container {display:block!important}
-
-#export-section {
-display: inline-block;
-position: relative;
-}
-
-#display-copied, #imported, #undefined {
+#display-copied, #imported, #import-error {
 display: none;
 position: absolute;
 background: #fff1d5;
@@ -541,7 +521,7 @@ font-weight: 500;
 box-shadow: 1px 2px 3px #888888;
 }
 
-#undefined {
+#import-error {
 background: #ff9c9c;
 }
 
@@ -578,6 +558,12 @@ margin: 5px;
 color: #ede19b;
 }
 
+#changelog ul {
+margin: 0;
+padding: 0;
+list-style: none;
+}
+
 #changelog li {
 font-size: 13px;
 color: #b9fda2;
@@ -609,6 +595,11 @@ color: #3f87ef;
 .TEQ {
 font-weight: 700;
 color: #68f75b;
+}
+
+:root {
+  /* Shared by .buttons and .container2 so the controls and the grid line up. */
+  --content-max: 1750px;
 }
 
 /* Type Glow Colors */
@@ -741,17 +732,175 @@ color: #68f75b;
   }
 }
 
-/* ═══ Overflow fix ═══ */
-.flair {
-  position: relative;
-  overflow: visible !important;
-}
-
-#icon-container {
-  overflow: visible;
-}
-
-/* specific selectors for the generated images */
+/* ═══ Image capture ═══ */
+/* html-to-image cannot render ::after with a var() background, so scripts.js
+   temporarily injects .capture-icon-img and hides ::after while capturing. */
 .capturing .flair.glow-pulse::after {
   display: none !important;
+}
+
+.capture-icon-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+
+/* ═══ Filter bars ═══ */
+/* Two single-choice groups on their own centred rows, so they never collide
+   with the absolutely positioned switch column on the right. */
+.filter-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.filter-bar button {
+  margin-right: 0;
+  padding: 5px 10px;
+  font-weight: 700;
+  font-size: 12px;
+  border-color: #2c4273;
+  background: #010e00;
+}
+
+/* Scoped by id on purpose: the generic `button:hover` rule sets a near-black
+   colour and ties on specificity with `.filter-bar button`, so the text colour
+   is pinned here where the id guarantees it wins. */
+#type-filter button,
+#eza-filter button { color: #9fb6d8; }
+
+#type-filter button[data-value="agl"] { color: #3f87ef; }
+#type-filter button[data-value="teq"] { color: #68f75b; }
+#type-filter button[data-value="str"] { color: #d64d3e; }
+#type-filter button[data-value="phy"] { color: #ebb664; }
+#type-filter button[data-value="int"] { color: #ab52bd; }
+
+/* Only the frame reacts to hover - see the note above. */
+.filter-bar button:hover {
+  border-color: currentColor;
+  background: #0a1a2e;
+}
+
+.filter-bar button.active {
+  border-color: currentColor;
+  box-shadow: 0 0 6px currentColor;
+  background: #0d2038;
+}
+
+
+/* ═══ Messages ═══ */
+.modal-empty,
+.load-error {
+  color: #eee;
+  font-size: 14px;
+  padding: 20px;
+  margin: 0;
+}
+
+.load-error code {
+  color: #6ee8fd;
+}
+
+/* Available to screen readers, invisible on screen. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+/* ═══ Small screens ═══ */
+/* The desktop layout hangs the changelog, switches, footer and mode toggle off
+   absolute positions with fixed pixel offsets. Below 760px there is no room for
+   that, so everything returns to normal flow and stacks. */
+@media only screen and (max-width: 760px) {
+  footer,
+  #changelog,
+  #toggleButton,
+  .dfe #toggleButton {
+    position: static;
+    top: auto;
+    right: auto;
+    left: auto;
+    transform: none;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #changelog {
+    width: fit-content;
+    max-width: 92%;
+    margin: 10px auto;
+    text-align: left;
+  }
+
+  #header {
+    max-width: 100%;
+    background-size: contain;
+    background-position: center top;
+    margin: 10px auto 8px;
+  }
+
+  .buttons {
+    padding: 0 5px;
+  }
+
+  .container2 {
+    margin-bottom: 10px;
+  }
+
+  /* Stacked, but keep the desktop reading order: buttons, then the toggles
+     sitting just above the grid they act on. */
+  .controls-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .main-buttons { order: 1; }
+
+  .toggle-row {
+    order: 2;
+    width: fit-content;
+    max-width: 100%;
+    padding-left: 0;
+    justify-content: center;
+  }
+
+  #toggleButton {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  footer {
+    margin-top: 10px;
+  }
+
+  #counter {
+    display: block;
+    padding: 0 5px;
+  }
 }

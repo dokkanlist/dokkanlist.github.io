@@ -1,827 +1,813 @@
-// helper function for parsing ranges in arrays
+'use strict';
+
+/* ============================================================
+   Dokkan Battle Checklist
+   ------------------------------------------------------------
+   Character data lives in data/lr.json and data/dfe.json.
+   Nothing in this file needs editing to add a character.
+   Run `node validate-data.js` after editing the data files.
+   ============================================================ */
+
+/* --- Constants ------------------------------------------- */
+
+const TYPES = ['agl', 'teq', 'str', 'phy', 'int'];
+const TYPE_WORDS = ['AGL', 'INT', 'STR', 'TEQ', 'PHY'];
+const MODE_IDS = ['lr', 'dfe'];
+const MODE_SOURCES = { lr: 'data/lr.json', dfe: 'data/dfe.json' };
+
+const STORAGE_KEY = 'dokkanChecklist';
+const STORAGE_VERSION = 2;
+
+const COMMIT_CACHE_KEY = 'dokkanLastUpdate';
+const COMMIT_CACHE_MS = 6 * 60 * 60 * 1000;
+const COMMIT_API = 'https://api.github.com/repos/dokkanlist/dokkanlist.github.io/commits?per_page=1';
+
+const FLIP_HALF_MS = 150;
+
+/* --- Range helpers --------------------------------------- */
+
+// "1-3,7,10-12" -> [1,2,3,7,10,11,12]
 function parseRanges(rangeString) {
   const result = [];
-  const parts = rangeString.split(',').map(s => s.trim());
+  for (const part of String(rangeString || '').split(',')) {
+    const token = part.trim();
+    if (!token) continue;
 
-  parts.forEach(part => {
-    if (part.includes('-')) {
-      const [start, end] = part.split('-').map(Number);
-      for (let i = start; i <= end; i++) {
-        result.push(i);
+    if (token.includes('-')) {
+      const [start, end] = token.split('-').map(Number);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+        console.warn(`Ignoring malformed range "${token}"`);
+        continue;
       }
-    } else if (part) { // Skip empty strings
-      result.push(Number(part));
+      for (let i = start; i <= end; i++) result.push(i);
+    } else {
+      const value = Number(token);
+      if (Number.isFinite(value)) result.push(value);
+      else console.warn(`Ignoring malformed value "${token}"`);
     }
-  });
-
+  }
   return result;
 }
 
-// Ensure button is loaded before adding event listener
-document.addEventListener("DOMContentLoaded", async () => {
-  //global declarations
-  let enter = document.getElementById('special');
-  let changelogList = document.getElementById('changelog-item');
-  $(".switch input").prop("checked", false);
+// [1,2,3,7,10,11,12] -> "1-3,7,10-12"
+function formatRanges(numbers) {
+  const sorted = [...new Set(numbers)].sort((a, b) => a - b);
+  const parts = [];
+  let i = 0;
+  while (i < sorted.length) {
+    const start = sorted[i];
+    let end = start;
+    while (i + 1 < sorted.length && sorted[i + 1] === end + 1) end = sorted[++i];
+    parts.push(start === end ? String(start) : `${start}-${end}`);
+    i++;
+  }
+  return parts.join(',');
+}
 
-  //target elements for animations
-  const toggleButton = document.getElementById("toggleButton");
-  const iconContainer = document.getElementById("icon-container");
-  const header = document.getElementById("header");
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
-  //event listening for clicks on toggle button
-  toggleButton.addEventListener("click", function () {
-    this.classList.add("flip");
-    header.classList.add("flip");
-    iconContainer.classList.add("glitch-blur");
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, ch => HTML_ESCAPES[ch]);
+}
 
-    setTimeout(() => {
-        toggleMode(); // Switch mode when halfway flipped
-        this.classList.remove("flip"); // Complete the animation
-        this.classList.add("flip-back"); // Finish rotation
-        header.classList.remove("flip"); // Complete the animation
-        header.classList.add("flip-back"); // Finish rotation
-        iconContainer.classList.remove("glitch-blur");
-    }, 150); // Wait for half of the animation time
+/* --- Persistent state ------------------------------------ */
 
-    setTimeout(() => {
-        this.classList.remove("flip-back"); // Reset so animation can happen again
-        header.classList.remove("flip-back");
-    }, 300);
-});
+const store = {
+  mode: 'lr',
+  altArt: false,
+  selected: { lr: new Set(), dfe: new Set() },
+  hidden: { lr: new Set(), dfe: new Set() }
+};
 
-  // loads last mode from localstorage otherwise default to LR
-  let currentMode = localStorage.getItem("dokkanMode") || "lr";
-  updateMode(currentMode, false);
+function serialize() {
+  const out = { v: STORAGE_VERSION, mode: store.mode, altArt: store.altArt };
+  for (const mode of MODE_IDS) {
+    out[mode] = {
+      selected: formatRanges([...store.selected[mode]]),
+      hidden: formatRanges([...store.hidden[mode]])
+    };
+  }
+  return out;
+}
 
-  //toggle button handling
-  function toggleMode() {
-    let newMode = document.body.classList.contains("dfe") ? "lr" : "dfe";
-    updateMode(newMode, true); // Save mode change
-    $(".switch input").prop("checked", false);
+// Returns false if the payload is not a checklist we understand.
+function applyState(payload) {
+  if (!payload || typeof payload !== 'object' || payload.v !== STORAGE_VERSION) return false;
 
-    //coreFunctions must be below loadFlairs
-    loadFlairs();
-    coreFunctions();
+  store.mode = MODE_IDS.includes(payload.mode) ? payload.mode : 'lr';
+  store.altArt = payload.altArt === true;
+  for (const mode of MODE_IDS) {
+    const side = payload[mode] || {};
+    store.selected[mode] = new Set(parseRanges(side.selected));
+    store.hidden[mode] = new Set(parseRanges(side.hidden));
+  }
+  return true;
+}
+
+function saveStore() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize()));
+  } catch (err) {
+    console.error('Could not save the checklist:', err);
+  }
+}
+
+// One-time upgrade from the old one-key-per-icon layout.
+function migrateLegacy() {
+  const legacyKeys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (/^\d+b?$/.test(key)) legacyKeys.push(key);
   }
 
-  //updating the page after a toggle
-  function updateMode(mode, save = true) {
-      if (!document.body) return; // Ensure body exists before modifying
-      currentMode = mode;
-      document.body.classList.remove("dfe", "lr"); // Clear existing classes
-      document.body.classList.add(mode); // Apply new mode class
+  const legacyMode = localStorage.getItem('dokkanMode');
+  const legacyAlt = localStorage.getItem('dokkanAltArt');
+  if (!legacyKeys.length && legacyMode === null && legacyAlt === null) return;
 
-      //updates the page title
-      document.getElementById("title").innerText = mode === "dfe"
-          ? "Dokkan Festival Exclusive Checklist"
-          : "Dokkan LR Checklist";
+  for (const key of legacyKeys) {
+    const mode = key.endsWith('b') ? 'dfe' : 'lr';
+    const id = Number(key.replace(/b$/, ''));
+    if (localStorage.getItem(key) === 'hidden') store.hidden[mode].add(id);
+    else store.selected[mode].add(id);
+  }
+  if (MODE_IDS.includes(legacyMode)) store.mode = legacyMode;
+  store.altArt = legacyAlt === 'true';
 
-      //update icon and button
-      document.getElementById("favicon").href = mode === "dfe" ? "stone.ico" : "lr.ico";
-      document.getElementById("toggleButton").innerHTML = mode === "dfe" ? "<div class='lr_switch'></div>" : "<div class='dfe_switch'></div>";
+  for (const key of legacyKeys) localStorage.removeItem(key);
+  localStorage.removeItem('dokkanMode');
+  localStorage.removeItem('dokkanAltArt');
+  saveStore();
+  console.info(`Upgraded ${legacyKeys.length} saved icons to the new storage format.`);
+}
 
-      if (save) {
-          localStorage.setItem("dokkanMode", mode); // Save mode to localStorage
-      }
-      enter.innerHTML = "";
-      changelogList.innerHTML = "";
+function loadStore() {
+  let raw = null;
+  try {
+    raw = localStorage.getItem(STORAGE_KEY);
+  } catch (err) {
+    console.error('localStorage is unavailable, progress will not be saved:', err);
+    return;
   }
 
-  //main icons handling
-  loadFlairs = function() {
-    // LR type arrays
-    let lrAGL = parseRanges('2,7,12,16,24,34,38-40,46-47,51,60-61,72,87-88,92,98,101,107,118-119,121,124-125,130,135,141,144,155,157,160-161,167,175-176,189,191');
-    let lrTEQ = parseRanges('1,9-10,17,20,29,36,42,44-45,53,57,64-65,70,79,82,93,95-96,100,106,110,113,126,129,131,140,143,146,150-151,153-154,171-172,179,185-187');
-    let lrSTR = parseRanges('4,8,14,21-22,32-33,35,41,43,52,54,62,67,69,77,80,84-85,90,97,105,111,115,120,128,137,142,148,152,156,164-166,169,174,178,183-184');
-    let lrPHY = parseRanges('5,11,15,19,23,27-28,31,49,56,59,63,66,68,71,74-75,83,91,94,99,108,112,114,127,133-134,136,145,149,158,162-163,168,181-182,190');
-    let lrINT = parseRanges('3,6,13,18,25-26,30,37,48,50,55,58,73,76,78,81,86,89,102-104,109,116-117,122-123,132,138-139,147,159,170,173,177,180,188');
-
-    // DFE type arrays
-    let dfAGL = parseRanges('4,11,14,20,26,29,44,46,50,53,55,61,66,70,79,86,89,93,97,102,107,114,117,120,124,130,137,139,141-142');
-    let dfTEQ = parseRanges('2,10,13,16,23,28,34-35,41,48,51,59-60,68,73,75,80,88,90,99,103,108,111,118,126,133,136,140,144');
-    let dfSTR = parseRanges('1,5,9,17,21,25,32,37,42,45,52,62,65,71,74,78,83,87,92,96,101,105,113,115,123,125,131,135,138');
-    let dfPHY = parseRanges('3,7,12,18-19,27,33,36,39,47,49,56,58,63,69,76,81,84,91,95,100,106,110,119,122,128-129,134,145');
-    let dfINT = parseRanges('6,8,15,22,24,30-31,38,40,43,54,57,64,67,72,77,82,85,94,98,104,109,112,116,121,127,132,143');
-
-    let lrEZA = parseRanges(`
-      1-9, 10-19, 20-29, 30-38, 40-49, 50-59, 60-69, 70-76,78-80,
-      82-89, 90-99, 101-109, 111-118, 132, 136, 149
-    `);
-    let lrEZA2 = parseRanges('1,4,6-8,11,12,14,22,54,116');
-
-    let dfEZA = parseRanges(`
-      1-3, 5-9, 10-12, 14-19, 20-29, 30-39, 40-49, 50-59,
-      60-69, 70-75, 77-79, 80-89, 90-102, 104, 106, 110, 114-116
-    `);
-    let dfEZA2 = parseRanges('1-11, 13-15, 17-20, 24-27, 43');
-
-    let lrAltArt = [14]
-    let dfAltArt = [106, 120]
-
-    //LR changelog items
-    const LRupdateItems = [
-      "INT SSJ Goku & Vegeta & Trunks EZA",
-      "STR First Form Frieza Super EZA",
-      "PHY Final Form Frieza",
-      "AGL Namek Goku"
-    ]
-
-    //DFE changelog items
-    const DFEupdateItems = [
-    "STR SSJ3 Goku EZA",
-    "PHY SSJ3 Daima Goku",
-    "AGL Android 21 EZA"
-    ]
-
-     // Create icons dynamically
-     // number format - LR : DFE
-    let total = currentMode === "lr" ? 191 : 145
-    let flaircheck = currentMode === "dfe" ? "b" : "";
-
-    // MAIN FLAIR CREATION LOOP
-    for (let i = 1; i <= total; i++) {
-      let folder = currentMode === "dfe" ? "images/dfe" : "images/lr";
-
-      const flairSpecial = document.createElement('div');
-      flairSpecial.className = 'flair';
-      flairSpecial.id = i+flaircheck;
-      flairSpecial.style.backgroundImage = `url(../`+folder+`/icons/${i}.webp)`;
-      enter.appendChild(flairSpecial);
+  if (raw) {
+    try {
+      if (applyState(JSON.parse(raw))) return;
+    } catch (err) {
+      console.warn('Saved checklist was unreadable, starting fresh:', err);
     }
+  }
+  migrateLegacy();
+}
 
-    // Assign EZA and SUPER EZA classes
-    if (currentMode === "lr") {
-      lrEZA.forEach(id => document.getElementById(id)?.classList.add('eza'));
-      lrEZA2.forEach(id => document.getElementById(id)?.classList.add('eza2'));
-    } else {
-      dfEZA.forEach(id => document.getElementById(id+'b')?.classList.add('eza'));
-      dfEZA2.forEach(id => document.getElementById(id+'b')?.classList.add('eza2'));
-    }
+/* --- Character data -------------------------------------- */
 
-    // Assign type glow classes
-    if (currentMode === "lr") {
-      lrAGL.forEach(id => document.getElementById(id)?.classList.add('type-agl'));
-      lrTEQ.forEach(id => document.getElementById(id)?.classList.add('type-teq'));
-      lrSTR.forEach(id => document.getElementById(id)?.classList.add('type-str'));
-      lrPHY.forEach(id => document.getElementById(id)?.classList.add('type-phy'));
-      lrINT.forEach(id => document.getElementById(id)?.classList.add('type-int'));
-      lrEZA2.forEach(id => document.getElementById(id)?.classList.add('glow-pulse'));
-    } else {
-      dfAGL.forEach(id => document.getElementById(id+'b')?.classList.add('type-agl'));
-      dfTEQ.forEach(id => document.getElementById(id+'b')?.classList.add('type-teq'));
-      dfSTR.forEach(id => document.getElementById(id+'b')?.classList.add('type-str'));
-      dfPHY.forEach(id => document.getElementById(id+'b')?.classList.add('type-phy'));
-      dfINT.forEach(id => document.getElementById(id+'b')?.classList.add('type-int'));
-      dfEZA2.forEach(id => document.getElementById(id+'b')?.classList.add('glow-pulse'));
-    }
+const modeData = {};
+let buildId = '';
 
-    // Add lightning overlay to Super EZA (glow-pulse) icons
-    document.querySelectorAll('.flair.glow-pulse').forEach(el => {
-      const type = ['agl','teq','str','phy','int'].find(t => el.classList.contains('type-' + t));
-      if (!type) return;
-      if (el.querySelector('.lightning-overlay')) return;
+function normaliseData(raw) {
+  const typeOf = new Map();
+  for (const type of TYPES) {
+    for (const id of parseRanges(raw.types && raw.types[type])) typeOf.set(id, type);
+  }
+  return {
+    label: raw.label,
+    title: raw.title,
+    favicon: raw.favicon,
+    iconDir: raw.iconDir,
+    idSuffix: raw.idSuffix || '',
+    total: Number(raw.total) || 0,
+    changelog: Array.isArray(raw.changelog) ? raw.changelog : [],
+    typeOf,
+    eza: new Set(parseRanges(raw.eza)),
+    eza2: new Set(parseRanges(raw.eza2)),
+    altArt: new Set(Array.isArray(raw.altArt) ? raw.altArt : [])
+  };
+}
 
-      // Capture the icon's background-image into a CSS variable
-      // so ::after can display it (CSS will hide the original)
-      const bg = el.style.backgroundImage || getComputedStyle(el).backgroundImage;
-      el.style.setProperty('--flair-bg', bg);
+async function loadModeData(mode) {
+  if (modeData[mode]) return modeData[mode];
+  const url = MODE_SOURCES[mode] + (buildId ? `?v=${buildId}` : '');
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`${MODE_SOURCES[mode]} responded ${response.status}`);
+  modeData[mode] = normaliseData(await response.json());
+  return modeData[mode];
+}
 
+/* --- Elements (assigned on DOMContentLoaded) ------------- */
+
+let grid, counter, changelogList, iconContainer, header, toggleButton;
+let hideToggle, altArtToggle;
+
+/* --- Rendering ------------------------------------------- */
+
+function setIconArt(flair, id) {
+  const data = modeData[store.mode];
+  const suffix = store.altArt && data.altArt.has(id) ? '_alt' : '';
+
+  // Resolved to an absolute URL on purpose. A relative path would be read
+  // against the document for background-image but against css/style.css for
+  // --flair-bg (which ::after consumes), so no single relative path is correct
+  // for both. Absolute also survives being served from a subdirectory.
+  const href = new URL(`${data.iconDir}/icons/${id}${suffix}.webp`, document.baseURI).href;
+  const url = `url("${href}")`;
+
+  flair.style.backgroundImage = url;
+  // Super EZA icons blank their own background and paint it through ::after.
+  if (flair.classList.contains('glow-pulse')) flair.style.setProperty('--flair-bg', url);
+}
+
+function renderGrid() {
+  const data = modeData[store.mode];
+  const fragment = document.createDocumentFragment();
+
+  for (let id = 1; id <= data.total; id++) {
+    const flair = document.createElement('div');
+    flair.className = 'flair';
+    flair.id = id + data.idSuffix;
+    flair.dataset.id = String(id);
+    flair.setAttribute('role', 'checkbox');
+    flair.setAttribute('aria-checked', 'false');
+
+    const type = data.typeOf.get(id);
+    if (type) flair.classList.add('type-' + type);
+    if (data.eza.has(id)) flair.classList.add('eza');
+    if (data.eza2.has(id)) flair.classList.add('eza2', 'glow-pulse');
+    if (data.altArt.has(id)) flair.classList.add('has-alt');
+
+    setIconArt(flair, id);
+
+    if (data.eza2.has(id) && type) {
       const overlay = document.createElement('div');
       overlay.className = `lightning-overlay lightning-${type}`;
-      el.appendChild(overlay);
-    });
-
-    // Mark icons that have alt art available
-    const altArtIds = currentMode === "lr" ? lrAltArt : dfAltArt;
-    altArtIds.forEach(id => {
-      const el = document.getElementById(id + flaircheck);
-      if (el) el.classList.add('has-alt');
-    });
-
-    // Apply alt art if toggle is on
-    const altArtEnabled = localStorage.getItem('dokkanAltArt') === 'true';
-    document.getElementById('show-alt-art').checked = altArtEnabled;
-    if (altArtEnabled) applyAltArt(true);
-
-    // Append changelog items
-    const types = ["AGL", "INT", "STR", "TEQ", "PHY"];
-    let updateItems = currentMode === "lr" ? LRupdateItems : DFEupdateItems;
-
-    updateItems.forEach(item => {
-      const listItem = document.createElement('li');
-      let modifiedText = item;
-
-      types.forEach(type => {
-        const regex = new RegExp(`\\b${type}\\b`, 'g');
-        modifiedText = modifiedText.replace(regex, `<span class="${type}">${type}</span>`);
-      });
-
-      listItem.innerHTML = modifiedText;
-      changelogList.appendChild(listItem);
-    });
-
-    // Fetch the latest commit date from GitHub API
-    const fetchLatestCommitDate = async () => {
-      try {
-        const response = await fetch('https://api.github.com/repos/dokkanlist/dokkanlist.github.io/commits');
-        if (!response.ok) throw new Error('Failed to fetch commit data');
-        const commits = await response.json();
-
-        // Get the date of the latest commit
-        const latestCommitDate = commits[0].commit.committer.date;
-        const formattedDate = new Date(latestCommitDate).toLocaleDateString(undefined, {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-
-        // Update the changelog date dynamically
-        document.querySelector('#changelog h3').textContent = `Last Update: ${formattedDate}`;
-      } catch (error) {
-        console.error('Error fetching the latest commit date:', error);
-      }
-    };
-
-    // Call the function during initialization
-    fetchLatestCommitDate();
+      flair.appendChild(overlay);
+    }
+    fragment.appendChild(flair);
   }
 
-  function applyAltArt(showAlt) {
-  const folder = currentMode === "dfe" ? "images/dfe" : "images/lr";
+  grid.textContent = '';
+  grid.appendChild(fragment);
+  applyStoredState();
+}
 
-  document.querySelectorAll('#special .flair.has-alt').forEach(el => {
-    // Get the numeric ID from the element
-    const id = el.id.replace('b', '');
-    const suffix = showAlt ? '_alt' : '';
-    const newBg = `url(../` + folder + `/icons/${id}${suffix}.webp)`;
+function applyStoredState() {
+  const selected = store.selected[store.mode];
+  const hidden = store.hidden[store.mode];
 
-    el.style.backgroundImage = newBg;
+  for (const flair of grid.children) {
+    const id = Number(flair.dataset.id);
+    const isHidden = hidden.has(id);
+    const isOn = !isHidden && selected.has(id);
+    flair.classList.toggle('disabled', isHidden);
+    flair.classList.toggle('selected', isOn);
+    flair.setAttribute('aria-checked', String(isOn));
+  }
+  applyFilters();
+}
 
-    // Update the --flair-bg variable if this is a glow-pulse icon
-    // (needed for the ::after z-index trick on super EZA icons)
-    if (el.classList.contains('glow-pulse')) {
-      el.style.setProperty('--flair-bg', newBg);
+function renderChangelog(data) {
+  changelogList.textContent = '';
+  for (const item of data.changelog) {
+    const listItem = document.createElement('li');
+    let html = escapeHtml(item);
+    for (const word of TYPE_WORDS) {
+      html = html.replace(new RegExp(`\\b${word}\\b`, 'g'), `<span class="${word}">${word}</span>`);
     }
+    listItem.innerHTML = html;
+    changelogList.appendChild(listItem);
+  }
+}
+
+function showLoadError(err) {
+  console.error('Could not load checklist data:', err);
+  grid.innerHTML =
+    '<p class="load-error">Could not load the checklist data. If you opened this file directly, ' +
+    'serve it over http instead (for example <code>python -m http.server</code>) - browsers block ' +
+    'data files on <code>file://</code> URLs.</p>';
+}
+
+/* --- Filters --------------------------------------------- */
+
+// Two independent axes; an icon must satisfy both to stay visible.
+let ezaFilter = '';   // '' | 'eza' | 'eza2' | 'both' | 'none'
+let typeFilter = '';  // '' | 'agl' | 'teq' | 'str' | 'phy' | 'int'
+
+function matchesFilters(flair) {
+  const isEza = flair.classList.contains('eza');
+  const isEza2 = flair.classList.contains('eza2');
+
+  switch (ezaFilter) {
+    case 'eza':  if (!isEza || isEza2) return false; break;
+    case 'eza2': if (!isEza2) return false; break;
+    case 'both': if (!isEza && !isEza2) return false; break;
+    case 'none': if (isEza || isEza2) return false; break;
+  }
+  if (typeFilter && !flair.classList.contains('type-' + typeFilter)) return false;
+  return true;
+}
+
+function applyFilters() {
+  // .disabled already carries display:none !important, so removed icons stay hidden.
+  for (const flair of grid.children) {
+    flair.style.display = matchesFilters(flair) ? '' : 'none';
+  }
+  updateCounter();
+}
+
+function isVisible(flair) {
+  return !flair.classList.contains('disabled') && flair.style.display !== 'none';
+}
+
+// Both bars are single-choice groups over the same button markup, so they share
+// one implementation. Each entry reads and writes its own filter variable.
+const FILTER_BARS = [
+  { id: 'type-filter', read: () => typeFilter, write: value => { typeFilter = value; } },
+  { id: 'eza-filter', read: () => ezaFilter, write: value => { ezaFilter = value; } }
+];
+
+function initFilterBars() {
+  for (const bar of FILTER_BARS) {
+    bar.el = document.getElementById(bar.id);
+    bar.el.addEventListener('click', event => {
+      const button = event.target.closest('button[data-value]');
+      if (!button) return;
+      // Clicking the active option again clears it, like the old toggles did.
+      bar.write(button.dataset.value === bar.read() ? '' : button.dataset.value);
+      syncFilterBars();
+      applyFilters();
+    });
+  }
+}
+
+function syncFilterBars() {
+  for (const bar of FILTER_BARS) {
+    if (!bar.el) continue;
+    const current = bar.read();
+    for (const button of bar.el.querySelectorAll('button[data-value]')) {
+      const active = button.dataset.value === current;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+  }
+}
+
+function resetFilterUi() {
+  ezaFilter = '';
+  typeFilter = '';
+  hideToggle.checked = false;
+  syncFilterBars();
+}
+
+/* --- Counter --------------------------------------------- */
+
+function updateCounter() {
+  const data = modeData[store.mode];
+  if (!data) return;
+
+  const perType = {};
+  for (const type of TYPES) perType[type] = { visible: 0, chosen: 0 };
+  let visible = 0;
+  let chosen = 0;
+
+  for (const flair of grid.children) {
+    if (!isVisible(flair)) continue;
+    const isOn = flair.classList.contains('selected');
+    visible++;
+    if (isOn) chosen++;
+
+    const type = data.typeOf.get(Number(flair.dataset.id));
+    if (!type) continue;
+    perType[type].visible++;
+    if (isOn) perType[type].chosen++;
+  }
+
+  const breakdown = TYPES
+    .filter(type => perType[type].visible > 0)
+    .map(type => {
+      const label = type.toUpperCase();
+      return `<span class="${label}">${label} ${perType[type].chosen}/${perType[type].visible}</span>`;
+    })
+    .join('');
+
+  counter.innerHTML =
+    `<span class="cl">Total ${escapeHtml(data.label)} - </span>${chosen}/${visible}` +
+    (breakdown ? `<span class="type-breakdown">${breakdown}</span>` : '');
+}
+
+/* --- Mode switching -------------------------------------- */
+
+async function setMode(mode) {
+  store.mode = mode;
+  saveStore();
+
+  document.body.classList.remove('lr', 'dfe');
+  document.body.classList.add(mode);
+
+  let data;
+  try {
+    data = await loadModeData(mode);
+  } catch (err) {
+    showLoadError(err);
+    return;
+  }
+
+  document.title = data.title;
+  document.getElementById('favicon').href = data.favicon;
+
+  // The button shows the mode it will switch you to.
+  const goingTo = mode === 'dfe' ? 'lr' : 'dfe';
+  toggleButton.innerHTML = `<div class="${goingTo}_switch"></div>`;
+  toggleButton.setAttribute('aria-label', goingTo === 'lr'
+    ? 'Switch to the LR checklist'
+    : 'Switch to the DFE checklist');
+
+  altArtToggle.checked = store.altArt;
+  renderChangelog(data);
+  renderGrid();
+}
+
+function initModeToggle() {
+  let switching = false;
+
+  toggleButton.addEventListener('click', () => {
+    if (switching) return;
+    switching = true;
+
+    toggleButton.classList.add('flip');
+    header.classList.add('flip');
+    iconContainer.classList.add('glitch-blur');
+
+    // Swap the contents at the midpoint of the flip.
+    setTimeout(async () => {
+      resetFilterUi();
+      await setMode(store.mode === 'dfe' ? 'lr' : 'dfe');
+
+      toggleButton.classList.replace('flip', 'flip-back');
+      header.classList.replace('flip', 'flip-back');
+      iconContainer.classList.remove('glitch-blur');
+
+      setTimeout(() => {
+        toggleButton.classList.remove('flip-back');
+        header.classList.remove('flip-back');
+        switching = false;
+      }, FLIP_HALF_MS);
+    }, FLIP_HALF_MS);
   });
 }
+
+/* --- Icon interaction ------------------------------------ */
+
+function initGrid() {
+  grid.addEventListener('click', event => {
+    const flair = event.target.closest('.flair');
+    if (!flair || flair.parentElement !== grid) return;
+
+    const id = Number(flair.dataset.id);
+
+    if (hideToggle.checked) {
+      store.hidden[store.mode].add(id);
+      store.selected[store.mode].delete(id);
+      flair.classList.add('disabled');
+      flair.classList.remove('selected');
+      flair.setAttribute('aria-checked', 'false');
+    } else {
+      const isOn = !store.selected[store.mode].has(id);
+      if (isOn) store.selected[store.mode].add(id);
+      else store.selected[store.mode].delete(id);
+      flair.classList.toggle('selected', isOn);
+      flair.setAttribute('aria-checked', String(isOn));
+    }
+
+    saveStore();
+    updateCounter();
+  });
+}
+
+// Selects everything currently on screen, so an active filter is respected.
+function selectVisible() {
+  const selected = store.selected[store.mode];
+  for (const flair of grid.children) {
+    if (!isVisible(flair)) continue;
+    selected.add(Number(flair.dataset.id));
+    flair.classList.add('selected');
+    flair.setAttribute('aria-checked', 'true');
+  }
+  saveStore();
+  updateCounter();
+}
+
+function resetCurrentMode() {
+  store.selected[store.mode].clear();
+  store.hidden[store.mode].clear();
+  saveStore();
+  applyStoredState();
+}
+
+/* --- Removed icons --------------------------------------- */
+
+function showRemoved() {
+  const data = modeData[store.mode];
+  const box = document.querySelector('.modal-content2');
+  const hidden = [...store.hidden[store.mode]].sort((a, b) => a - b);
+
+  box.textContent = '';
+  hideToggle.checked = false;
+
+  if (!hidden.length) {
+    const message = document.createElement('p');
+    message.className = 'modal-empty';
+    message.textContent = 'No icons have been removed.';
+    box.appendChild(message);
+  }
+
+  for (const id of hidden) {
+    const icon = document.createElement('img');
+    icon.className = 'flair';
+    icon.dataset.id = String(id);
+    icon.src = `${data.iconDir}/icons/${id}.webp`;
+    icon.alt = `Icon ${id}`;
+    box.appendChild(icon);
+  }
+
+  openModal('removed-modal');
+}
+
+function initRemovedModal() {
+  document.querySelector('.modal-content2').addEventListener('click', event => {
+    const icon = event.target.closest('img[data-id]');
+    if (!icon) return;
+    store.hidden[store.mode].delete(Number(icon.dataset.id));
+    saveStore();
+    icon.remove();
+    applyStoredState();
+  });
+}
+
+/* --- Modals ---------------------------------------------- */
+
+let activeModal = null;
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.style.visibility = 'visible';
+  modal.style.opacity = '1';
+  modal.setAttribute('aria-hidden', 'false');
+  activeModal = modal;
+}
+
+function closeModal(modal) {
+  const target = modal || activeModal;
+  if (!target) return;
+  target.style.visibility = 'hidden';
+  target.style.opacity = '0';
+  target.setAttribute('aria-hidden', 'true');
+  document.getElementById('import-text').value = '';
+  if (activeModal === target) activeModal = null;
+}
+
+function initModals() {
+  for (const button of document.querySelectorAll('.modal .close-btn')) {
+    button.addEventListener('click', () => closeModal(button.closest('.modal')));
+  }
+  document.addEventListener('click', event => {
+    if (activeModal && event.target === activeModal) closeModal(activeModal);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && activeModal) closeModal(activeModal);
+  });
+}
+
+function toast(selector) {
+  $(selector).stop(true, true).fadeIn(150).delay(1200).fadeOut(300);
+}
+
+/* --- Image export ---------------------------------------- */
+
+// html-to-image cannot render ::after with a var() background, so the icon art
+// is temporarily re-added as a real <img> sitting above the lightning overlay.
+function prepareForCapture() {
+  for (const flair of document.querySelectorAll('.flair.glow-pulse')) {
+    const background = flair.style.getPropertyValue('--flair-bg');
+    const match = background && background.match(/url\(["']?(.+?)["']?\)/);
+    if (!match) continue;
+
+    const image = document.createElement('img');
+    image.src = match[1];
+    image.className = 'capture-icon-img';
+    image.alt = '';
+    flair.appendChild(image);
+  }
+  document.documentElement.classList.add('capturing');
+}
+
+function restoreAfterCapture() {
+  for (const image of document.querySelectorAll('.capture-icon-img')) image.remove();
+  document.documentElement.classList.remove('capturing');
+}
+
+const CAPTURE_OPTIONS = {
+  pixelRatio: 3,
+  skipFonts: true,
+  filter: node => !(node.tagName === 'LINK' && node.href && node.href.startsWith('moz-extension://'))
+};
+
+function reportMissingLibrary(box) {
+  if (typeof htmlToImage !== 'undefined') return false;
+  box.textContent = '';
+  const message = document.createElement('p');
+  message.className = 'modal-empty';
+  message.textContent = 'The image export library failed to load. Check your connection and reload the page.';
+  box.appendChild(message);
+  return true;
+}
+
+async function generateImage() {
+  const box = document.querySelector('.modal-content');
+  box.textContent = '';
+  openModal('image-modal');
+  if (reportMissingLibrary(box)) return;
+
+  prepareForCapture();
+  try {
+    const dataUrl = await htmlToImage.toPng(iconContainer, Object.assign({}, CAPTURE_OPTIONS, {
+      skipAutoScale: false,
+      style: { transform: 'scale(1)', transformOrigin: 'top left' }
+    }));
+    const image = new Image();
+    image.src = dataUrl;
+    image.alt = 'Checklist export';
+    image.style.width = iconContainer.offsetWidth + 'px';
+    image.style.height = iconContainer.offsetHeight + 'px';
+    box.appendChild(image);
+  } catch (err) {
+    console.error('Image generation failed:', err);
+    box.textContent = 'Image generation failed. See the browser console for details.';
+  } finally {
+    restoreAfterCapture();
+  }
+}
+
+async function downloadImage() {
+  if (typeof htmlToImage === 'undefined' || typeof window.saveAs !== 'function') {
+    console.error('Image export libraries are not available.');
+    return;
+  }
+
+  prepareForCapture();
+  try {
+    const blob = await htmlToImage.toBlob(iconContainer, CAPTURE_OPTIONS);
+    if (blob) window.saveAs(blob, 'checklist.png');
+    else console.error('Image blob generation failed.');
+  } catch (err) {
+    console.error('Download failed:', err);
+  } finally {
+    restoreAfterCapture();
+  }
+}
+
+/* --- Import / export ------------------------------------- */
+
+function openExport() {
+  const field = document.getElementById('export-text');
+  field.value = LZString.compressToEncodedURIComponent(JSON.stringify(serialize()));
+  openModal('export-modal');
+  field.focus();
+  field.select();
+}
+
+async function copyExport() {
+  const field = document.getElementById('export-text');
+  field.select();
+  try {
+    await navigator.clipboard.writeText(field.value);
+  } catch (err) {
+    try {
+      document.execCommand('copy');
+    } catch (fallbackErr) {
+      console.error('Could not copy to the clipboard:', err, fallbackErr);
+      return;
+    }
+  }
+  toast('#display-copied');
+}
+
+async function importSelection() {
+  const code = document.getElementById('import-text').value.trim();
+
+  // Decode and validate before touching anything already saved, so a bad code
+  // leaves the existing checklist untouched.
+  let payload = null;
+  try {
+    payload = JSON.parse(LZString.decompressFromEncodedURIComponent(code) || 'null');
+  } catch (err) {
+    payload = null;
+  }
+
+  if (!applyState(payload)) {
+    toast('#import-error');
+    return;
+  }
+
+  saveStore();
+  resetFilterUi();
+  await setMode(store.mode);
+  toast('#imported');
+}
+
+/* --- Last update date ------------------------------------ */
+
+async function showLastUpdate() {
+  const heading = document.querySelector('#changelog h3');
+  if (!heading) return;
+
+  const render = iso => {
+    heading.textContent = 'Last Update: ' + new Date(iso).toLocaleDateString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric'
+    });
+  };
+
+  try {
+    const cached = JSON.parse(localStorage.getItem(COMMIT_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.at < COMMIT_CACHE_MS) {
+      render(cached.date);
+      return;
+    }
+  } catch (err) {
+    /* cache unreadable - fall through and refetch */
+  }
+
+  try {
+    const response = await fetch(COMMIT_API);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const commits = await response.json();
+    const date = Array.isArray(commits) && commits[0] && commits[0].commit
+      && commits[0].commit.committer && commits[0].commit.committer.date;
+    if (!date) throw new Error('unexpected response shape');
+
+    render(date);
+    localStorage.setItem(COMMIT_CACHE_KEY, JSON.stringify({ date, at: Date.now() }));
+  } catch (err) {
+    console.warn('Could not fetch the last update date:', err);
+  }
+}
+
+/* --- Alt art --------------------------------------------- */
 
 function initAltArtToggle() {
-  const toggle = document.getElementById('show-alt-art');
-  toggle.addEventListener('change', function() {
-    localStorage.setItem('dokkanAltArt', this.checked);
-    applyAltArt(this.checked);
+  altArtToggle.addEventListener('change', () => {
+    store.altArt = altArtToggle.checked;
+    saveStore();
+
+    const data = modeData[store.mode];
+    for (const flair of grid.children) {
+      const id = Number(flair.dataset.id);
+      if (data.altArt.has(id)) setIconArt(flair, id);
+    }
   });
 }
 
-  //coreFunctions must be below loadFlairs
-  loadFlairs();
+/* --- Boot ------------------------------------------------ */
+
+document.addEventListener('DOMContentLoaded', async () => {
+  grid = document.getElementById('special');
+  counter = document.getElementById('counter');
+  changelogList = document.getElementById('changelog-item');
+  iconContainer = document.getElementById('icon-container');
+  header = document.getElementById('header');
+  toggleButton = document.getElementById('toggleButton');
+  hideToggle = document.getElementById('hide-lr');
+  altArtToggle = document.getElementById('show-alt-art');
+  buildId = document.body.dataset.build || '';
+
+  loadStore();
+  initFilterBars();
+  resetFilterUi();
+
+  initModals();
+  initGrid();
+  initRemovedModal();
   initAltArtToggle();
-  coreFunctions();
-
-  // <----------------------------------------------------------------->
-
-  // updates local storage values
-  function updateStorage(key, value, save) {
-    if (save) {
-      localStorage.setItem(key, value);
-    }
-    else {
-      localStorage.removeItem(key);
-    }
-  }
-
-  // reads local storage based on key
-  function readStorageValue(key) {
-    return localStorage.getItem(key);
-  }
-
-  // reads entire local storage array
-  function readAllStorage() {
-    let nbItem = localStorage.length;
-    let store = [];
-    let i;
-    let storeKey;
-    for (i = 0; i < nbItem; i += 1) {
-      storeKey = localStorage.key(i);
-      store.push({
-        "key" : storeKey,
-        "value" : readStorageValue(storeKey)
-      });
-    }
-    return store;
-  }
-
-  // reads storage and updates the page accordingly
-  function updatePage() {
-    //check local storage
-    const store = readAllStorage();
-    //restore the selected class
-    $.each(store, function(index, elem) {
-      if(elem['value'] == 'hidden')
-        $("#" + elem.key).addClass("disabled");
-      else if (elem['value'] == 'true'){
-        $('.base').toggleClass('hidden');
-        $('#hide-base').css('display', 'none');
-        $('#show-base').css('display', 'inline-block');
-      }
-      else
-        $("#" + elem.key).addClass("selected");
-    });
-  }
-
-  // select all icons on page
-  function selectPage() {
-      //adds selected class to every icon
-      $("#special .flair:not(.disabled)").addClass("selected");
-
-    const className = document.getElementsByClassName('selected');
-    let idStore = new Array();
-
-
-    //loops every ID and stores key into array
-    for(var i = 0; i < className.length; i++) {
-      idStore.push({"key" : className[i].id, "value" : className[i].className});
-    }
-
-    //add IDs from array to local storage
-    for(var j=0; j<idStore.length; j++) {
-        updateStorage(idStore[j]['key'], null, true);
-      }
-  }
-
-  // remove all selections on SELECTED page
-  function resetPage() {
-      const currentMode = localStorage.getItem("dokkanMode");
-      Object.keys(localStorage).forEach(key => {
-          // Skip non-icon keys
-          const numericPart = key.replace(/b$/, '');
-          if (isNaN(numericPart)) return;
-
-          if ((currentMode === "lr" && !key.endsWith("b")) || (currentMode === "dfe" && key.endsWith("b"))) {
-              localStorage.removeItem(key);
-              $("#" + key).removeClass("selected disabled");
-          }
-      });
-  }
-
-  //total legend tracker
-  function countLegends() {
-    let rarity = currentMode === "lr" ? "LRs" : "DFEs";
-
-    // Count only visible and selected icons
-    const visibleSelected = $("#special .flair.selected").filter(function() {
-      return $(this).css('display') !== 'none';
-    }).length;
-
-    // Count total visible icons (not disabled and not hidden by filter)
-    const totalVisible = $("#special .flair").filter(function() {
-      return !$(this).hasClass('disabled') && $(this).css('display') !== 'none';
-    }).length;
-
-    $('#counter').html("<span class='cl'>Total "+rarity+" - </span>" + visibleSelected + "/" + totalVisible);
-  }
-
-  //unhides specific Legends
-  function listHidden() {
-    let folder = currentMode === "dfe" ? "images/dfe" : "images/lr";
-
-    toggleModal('removed-modal');
-    $(".modal-content2").empty();
-    $("#hide-lr").prop("checked", false);
-
-    const disabled = $(".disabled");
-    const box = $('.modal-content2');
-
-    //creates new images for hidden legends
-    for(var i = 0; i < disabled.length; i++) {
-      const flair = document.createElement('img');
-      flair.setAttribute('class', 'flair');
-      flair.setAttribute('name', disabled[i].id);
-      flair.setAttribute('src', folder+'/icons/'+disabled[i].id.replace(/b$/, '')+'.webp');
-
-      box.append(flair);
-    }
-
-    //unhide legends in checklist when clicked
-    $(".modal-content2 img").mousedown(function(e) {
-      let $obj = $(this);
-      let id = $obj[0].name;
-
-      $("#"+id).removeClass('disabled');
-      //removes from modal display
-      $obj.hide();
-      //removes from local storage
-      localStorage.removeItem(id);
-      //updates counters
-      countLegends();
-    });
-  }
-
-  //toggles popup window
-  function toggleModal(e) {
-    let modal = document.querySelector("#"+e);
-    let closeBtn = document.querySelector("#"+e+" .close-btn")
-
-    modal.style.visibility = "visible";
-    modal.style.opacity = "100";
-
-    closeBtn.onclick = function(){
-      modal.style.visibility = "hidden";
-      modal.style.opacity = "0";
-      $('#import-text').val('');
-    }
-    window.onclick = function(e){
-      if(e.target == modal){
-        modal.style.visibility = "hidden";
-        modal.style.opacity = "0";
-        $('#import-text').val('');
-      }
-    }
-  }
-
-  function windowOnClick(event) {
-    const modal = document.querySelector(".modal");
-     if (event.target === modal) {
-         toggleModal();
-     }
-  }
-
-  // ═══ Image Export Helpers ═══
-  //
-  // Problem: ::after with var(--flair-bg) doesn't render in html-to-image.
-  // Solution: Temporarily inject an <img> element inside .glow-pulse flairs
-  // that sits above the lightning overlay (z-index: 1), replicating what
-  // ::after does on the live page. Remove it after capture.
-
-  function prepareForCapture() {
-    document.querySelectorAll('.flair.glow-pulse').forEach(el => {
-      const bg = el.style.getPropertyValue('--flair-bg');
-      if (!bg) return;
-
-      // Extract URL from the var value, e.g. url("...") or url(...)
-      const urlMatch = bg.match(/url\(["']?(.+?)["']?\)/);
-      if (!urlMatch) return;
-
-      // Create an img element that covers the flair and sits above lightning
-      const img = document.createElement('img');
-      img.src = urlMatch[1];
-      img.className = 'capture-icon-img';
-      img.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-        pointer-events: none;
-        object-fit: contain;
-      `;
-      el.appendChild(img);
-    });
-
-    // Hide ::after (the img replaces it)
-    document.documentElement.classList.add('capturing');
-  }
-
-  function restoreAfterCapture() {
-    // Remove injected img elements
-    document.querySelectorAll('.capture-icon-img').forEach(img => img.remove());
-
-    // Restore ::after
-    document.documentElement.classList.remove('capturing');
-  }
-
-  // ═══ Export Image Function ═══
-  function generateImage() {
-    toggleModal('image-modal');
-    $(".modal-content").empty();
-
-    const node = document.getElementById('icon-container');
-
-    prepareForCapture();
-
-    htmlToImage.toPng(node, {
-      pixelRatio: 3,
-      skipFonts: true,
-      skipAutoScale: false,
-      style: {
-        transform: 'scale(1)',
-        transformOrigin: 'top left'
-      }
-    })
-    .then(function (dataUrl) {
-      restoreAfterCapture();
-      const img = new Image();
-      img.src = dataUrl;
-      img.style.width = node.offsetWidth + "px";
-      img.style.height = node.offsetHeight + "px";
-      $(".modal-content").append(img);
-    })
-    .catch(function (error) {
-      restoreAfterCapture();
-      console.error('Image generation failed:', error);
-    });
-  }
-
-  // ═══ Download Function ═══
-  function download() {
-    const node = document.getElementById('icon-container');
-
-    prepareForCapture();
-
-    htmlToImage.toBlob(node, {
-      pixelRatio: 3,
-      skipFonts: true,
-      filter: (node) => {
-        return !(node.tagName === 'LINK' && node.href && node.href.startsWith('moz-extension://'));
-      }
-    })
-    .then(function (blob) {
-      restoreAfterCapture();
-      if (blob) {
-        window.saveAs(blob, 'checklist.png');
-      } else {
-        console.error("Image blob generation failed.");
-      }
-    })
-    .catch(function (error) {
-      restoreAfterCapture();
-      console.error('Download failed:', error);
-    });
-  }
-
-  //export localStorage
-  function exportSelection() {
-    let raw = JSON.stringify(localStorage);
-    container = document.getElementById("export-text");
-    container.setAttribute("style", "transform: translateY(0); opacity: 1; z-index: 1;");
-    container.value = LZString.compressToEncodedURIComponent(raw);
-  }
-
-  //copy exported data
-  function copySelection() {
-    container = document.getElementById("export-text");
-    container.select();
-    document.execCommand("copy");
-    $('#display-copied').fadeIn().delay(1000).fadeOut();
-  }
-
-  //apply imported data
-  function importSelection() {
-    let text = document.getElementById("import-text").value;
-
-    plaintext = LZString.decompressFromEncodedURIComponent(text);
-
-    //clears local storage
-    localStorage.clear();
-
-    try {
-      // Convert to a JSON object
-      data = JSON.parse(plaintext);
-
-      console.log(data);
-
-      // Iterate over the JSON object and save to localstorage
-      Object.keys(data).map(function(key, index) {
-          const value = data[key];
-          localStorage.setItem(key, value);
-      });
-
-      $('#imported').fadeIn().delay(1000).fadeOut();
-    }
-    //if error
-    catch {
-      $('#undefined').fadeIn().delay(1000).fadeOut();
-    }
-
-    coreFunctions();
-  }
-
-  function coreFunctions() {
-    //restore previous state
-    updatePage();
-
-    //legend counter
-    countLegends();
-  }
-
-  // EZA Filter functionality
-    function initEZAFilters() {
-      const showEzaOnly = document.getElementById('show-eza-only');
-      const showEza2Only = document.getElementById('show-eza2-only');
-      const showBothEza = document.getElementById('show-both-eza');
-      const showNoEza = document.getElementById('show-no-eza');
-
-      // Store original display values
-      let originalDisplay = new Map();
-
-      // Helper function to reset all filters
-      function resetEZAFilters() {
-        showEzaOnly.checked = false;
-        showEza2Only.checked = false;
-        showBothEza.checked = false;
-        showNoEza.checked = false;
-
-        // Restore original display values
-        document.querySelectorAll('#special .flair').forEach(flair => {
-          flair.style.display = originalDisplay.get(flair) || '';
-        });
-
-        countLegends();
-      }
-
-      // Helper function to save original state
-      function saveOriginalDisplay() {
-        document.querySelectorAll('#special .flair').forEach(flair => {
-          originalDisplay.set(flair, flair.style.display);
-        });
-      }
-
-      // Helper function to apply filter
-      function applyEZAFilter(filterType) {
-        // Save original state before first filter
-        if (originalDisplay.size === 0) {
-          saveOriginalDisplay();
-        }
-
-        // First, hide all non-disabled icons
-        document.querySelectorAll('#special .flair').forEach(flair => {
-          if (!flair.classList.contains('disabled')) {
-            flair.style.display = 'none';
-          }
-        });
-
-        // Then show only the filtered ones
-        switch(filterType) {
-          case 'eza':
-            // Show EZA only = has .eza but NOT .eza2
-            document.querySelectorAll('#special .flair.eza').forEach(flair => {
-              if (!flair.classList.contains('disabled') && !flair.classList.contains('eza2')) {
-                flair.style.display = '';
-              }
-            });
-            break;
-          case 'eza2':
-            // Show Super EZA only = has .eza2
-            document.querySelectorAll('#special .flair.eza2').forEach(flair => {
-              if (!flair.classList.contains('disabled')) {
-                flair.style.display = '';
-              }
-            });
-            break;
-          case 'both':
-            // Show both = has either .eza OR .eza2
-            document.querySelectorAll('#special .flair.eza, #special .flair.eza2').forEach(flair => {
-              if (!flair.classList.contains('disabled')) {
-                flair.style.display = '';
-              }
-            });
-            break;
-          case 'none':
-            // Show non-EZA only = has neither .eza nor .eza2
-            document.querySelectorAll('#special .flair').forEach(flair => {
-              if (!flair.classList.contains('disabled') && !flair.classList.contains('eza') && !flair.classList.contains('eza2')) {
-                flair.style.display = '';
-              }
-            });
-            break;
-        }
-
-    countLegends();
-  }
-
-  // Event listeners for each toggle
-  showEzaOnly.addEventListener('change', function() {
-    if (this.checked) {
-      // Uncheck other filters
-      showEza2Only.checked = false;
-      showBothEza.checked = false;
-      showNoEza.checked = false;
-      applyEZAFilter('eza');
-    } else {
-      resetEZAFilters();
+  initModeToggle();
+
+  document.getElementById('select-all').addEventListener('click', selectVisible);
+  document.getElementById('select-none').addEventListener('click', () => {
+    if (confirm("Are you sure you want to reset the page? (This won't affect the other side of the checklist)")) {
+      resetCurrentMode();
     }
   });
+  document.getElementById('list-hidden').addEventListener('click', showRemoved);
+  document.getElementById('generate').addEventListener('click', generateImage);
+  document.getElementById('image-download').addEventListener('click', downloadImage);
+  document.getElementById('import').addEventListener('click', () => openModal('import-modal'));
+  document.getElementById('import-btn').addEventListener('click', importSelection);
+  document.getElementById('export').addEventListener('click', openExport);
+  document.getElementById('copy-export').addEventListener('click', copyExport);
 
-  showEza2Only.addEventListener('change', function() {
-    if (this.checked) {
-      // Uncheck other filters
-      showEzaOnly.checked = false;
-      showBothEza.checked = false;
-      showNoEza.checked = false;
-      applyEZAFilter('eza2');
-    } else {
-      resetEZAFilters();
-    }
-  });
+  const exportField = document.getElementById('export-text');
+  exportField.addEventListener('click', () => exportField.select());
 
-  showBothEza.addEventListener('change', function() {
-    if (this.checked) {
-      // Uncheck other filters
-      showEzaOnly.checked = false;
-      showEza2Only.checked = false;
-      showNoEza.checked = false;
-      applyEZAFilter('both');
-    } else {
-      resetEZAFilters();
-    }
-  });
+  document.getElementById('year').textContent = String(new Date().getFullYear());
 
-  showNoEza.addEventListener('change', function() {
-    if (this.checked) {
-      // Uncheck other filters
-      showEzaOnly.checked = false;
-      showEza2Only.checked = false;
-      showBothEza.checked = false;
-      applyEZAFilter('none');
-    } else {
-      resetEZAFilters();
-    }
-  });
-}
-
-// Call this after coreFunctions()
-initEZAFilters();
-
-  //main function for selecting icons
-  $("#special").on("click", "div", function(e) {
-    const isChecked = document.getElementById('hide-lr').checked;
-
-    const $obj = $(this);
-
-    //hide LRs toggle
-    if(isChecked){
-      $obj.toggleClass("disabled");
-      $obj.removeClass("selected");
-
-      const save = $obj.hasClass("disabled");
-
-      updateStorage($obj.attr("id"), "hidden", save);
-      countLegends();
-    }
-    //if not checked
-    else {
-      //toggles selected classes
-      $obj.toggleClass("selected");
-
-      //creates object if selected class is present
-      const save = $obj.hasClass("selected");
-
-      //update the key
-      updateStorage($obj.attr("id"), null, save);
-
-      countLegends();
-    }
-  });
-
-  document.getElementById('image-download')?.addEventListener('click', download);
-
-  //select all button
-  $("#select-all").on("click", function() {
-    selectPage();
-    countLegends();
-  });
-
-  //clear button
-  $("#select-none").on("click", function() {
-    if (confirm("Are you sure you want to reset the page? (This won't affect the other side of the checklist)")){
-      resetPage();
-      countLegends();
-    }
-  });
-
-  //unhide specific legends
-  $("#list-hidden").on("click", function() {
-    listHidden();
-    countLegends();
-  });
-
-  //generate image window
-  $("#generate").on("click", function() {
-    generateImage();
-    countLegends();
-  });
-
-  //import code window
-  $("#import").on("click", function() {
-    toggleModal('import-modal');
-  });
-
-  //import code button
-  $("#import-btn").on("click", function() {
-    importSelection();
-    countLegends();
-  });
-
-  //export code window
-  $("#export").on("click", function() {
-    toggleModal('export-modal');
-    exportSelection();
-  });
-
-  //copy code button
-  $("#copy-export").on("click", function() {
-    copySelection();
-  });
+  await setMode(store.mode);
+  showLastUpdate();
 });

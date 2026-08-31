@@ -1,6 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="antonlabz">
+  <meta name="description" content="Checklist for Dokkan Battle">
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-VKBXJKPT04"></script>
@@ -12,176 +17,174 @@
     gtag('config', 'G-VKBXJKPT04');
   </script>
 
-  <title id="title">Dokkan Checklist</title>
+  <title>Dokkan Checklist</title>
 
   <link rel="icon" id="favicon" type="image/x-icon" href="stone.ico">
 
   <!--stylesheets-->
-  <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
-  <link rel="stylesheet" href="css/style.css" type="text/css" media="all" />
-  <link rel="stylesheet" href="css/flairs.css" type="text/css" media="all" />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="css/style.css?v=555ac329" type="text/css" media="all">
+  <link rel="stylesheet" href="css/flairs.css?v=555ac329" type="text/css" media="all">
 
+  <!--scripts (pinned + SRI so a CDN release cannot silently break the page)-->
+  <script defer
+          src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+          integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs"
+          crossorigin="anonymous"></script>
+  <script defer
+          src="https://unpkg.com/html-to-image@1.11.13/dist/html-to-image.js"
+          integrity="sha384-Tha/42qsYmpYmQ07pX+nJzkKumO0BzKJxK/uzVc7xyBQxVCUgQBhQIG8L7vXK+9C"
+          crossorigin="anonymous"></script>
+  <script defer
+          src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"
+          integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy"
+          crossorigin="anonymous"></script>
+  <script defer src="js/lz-string.js?v=555ac329"></script>
+  <script defer src="js/scripts.js?v=555ac329"></script>
 
-  <!--scripts-->
-  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <script type="text/javascript" src="js/scripts.js"></script>
-  <script src="https://unpkg.com/html-to-image"></script>
-  <script src="https://unpkg.com/file-saver"></script>
-  <script src="js/FileSaver.js"></script>
-  <script src="js/lz-string.js"></script>
-
-  <!--meta-->
-  <meta charset="utf-8">
-  <meta name="author" content="antonlabz">
-  <meta name="description" content="Checklist for Dokkan Battle">
 </head>
 
-<body>
+<body data-build="555ac329">
   <noscript>JavaScript is required to run this page.</noscript>
 
   <div id="header"></div>
 
-    <!--CHANGELOG-->
+  <!--CHANGELOG-->
   <div id="changelog">
     <h2>CHANGELOG</h2>
     <h3></h3>
-    <span id="changelog-item"></span>
+    <ul id="changelog-item"></ul>
   </div>
 
   <span id="counter"></span>
 
   <div class="buttons">
-    <button id="select-all">Select All</button>
-    <button id="select-none">Reset</button>
-    <button id="list-hidden">List Removed Icons</button>
-    <button id="generate">Generate Image</button>
-    <button id="import">Import</button>
-    <button id="export">Export</button>
+    <!--Filter bars. Each is a single-choice group; the two AND together.-->
+    <div class="filter-bars">
+      <div id="type-filter" class="filter-bar" role="group" aria-label="Filter by type">
+        <button type="button" data-value="" aria-pressed="true" class="active">All Types</button>
+        <button type="button" data-value="agl" aria-pressed="false">AGL</button>
+        <button type="button" data-value="teq" aria-pressed="false">TEQ</button>
+        <button type="button" data-value="str" aria-pressed="false">STR</button>
+        <button type="button" data-value="phy" aria-pressed="false">PHY</button>
+        <button type="button" data-value="int" aria-pressed="false">INT</button>
+      </div>
 
-    <div class="switch-container">
+      <div id="eza-filter" class="filter-bar" role="group" aria-label="Filter by EZA status">
+        <button type="button" data-value="" aria-pressed="true" class="active">All</button>
+        <button type="button" data-value="eza" aria-pressed="false">EZA</button>
+        <button type="button" data-value="eza2" aria-pressed="false">Super EZA</button>
+        <button type="button" data-value="both" aria-pressed="false">Any EZA</button>
+        <button type="button" data-value="none" aria-pressed="false">No EZA</button>
+      </div>
+    </div>
+
+    <!--Toggles share this row with the buttons; the grid keeps the buttons
+        centred on the page and stops the two from ever colliding.-->
+    <div class="controls-row">
+      <div class="toggle-row">
         <div class="switch-group">
-      <label class="switch">
-        <input id="hide-lr" type="checkbox">
-        <span class="slider"></span>
-      </label>
-      <span class="tooltip">- remove icons from list</span>
-    </div>
+          <input id="show-alt-art" type="checkbox">
+          <label class="tooltip" for="show-alt-art">- toggle alt art</label>
+        </div>
 
-    <div class="switch-group">
-      <label class="switch">
-        <input id="show-eza-only" type="checkbox">
-        <span class="slider"></span>
-      </label>
-      <span class="tooltip">- show EZAs only</span>
-    </div>
+        <div class="switch-group">
+          <label class="switch" for="hide-lr">
+            <input id="hide-lr" type="checkbox">
+            <span class="slider"></span>
+          </label>
+          <label class="tooltip" for="hide-lr">- remove icons from list</label>
+        </div>
+      </div>
 
-    <div class="switch-group">
-      <label class="switch">
-        <input id="show-eza2-only" type="checkbox">
-        <span class="slider"></span>
-      </label>
-      <span class="tooltip">- show Super EZAs only</span>
+      <div class="main-buttons">
+        <button id="select-all" title="Selects every icon currently on screen, so an active filter is respected">Select All</button>
+        <button id="select-none">Reset</button>
+        <button id="list-hidden">List Removed Icons</button>
+        <button id="generate">Generate Image</button>
+        <button id="import">Import</button>
+        <button id="export">Export</button>
+      </div>
     </div>
-
-    <div class="switch-group">
-      <label class="switch">
-        <input id="show-both-eza" type="checkbox">
-        <span class="slider"></span>
-      </label>
-      <span class="tooltip">- show all EZAs</span>
-    </div>
-
-    <div class="switch-group">
-      <label class="switch">
-        <input id="show-no-eza" type="checkbox">
-        <span class="slider"></span>
-      </label>
-      <span class="tooltip">- show non-EZAs only</span>
-    </div>
-  </div>
   </div>
 
   <!--Generate Image Window-->
-  <div class="modal" id="image-modal">
+  <div class="modal" id="image-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="image-modal-title">
     <div class="modal-container">
       <div class="modal-header">
-        <span class="modal-text">Image Export</span>
+        <span class="modal-text" id="image-modal-title">Image Export</span>
         <button id="image-download">Download Image</button>
-        <p><i>(otherwise, <code>right-click > copy</code>)</i></p>
-        <span class="close-btn">&times;</span>
+        <p><i>(otherwise, <code>right-click &gt; copy</code>)</i></p>
+        <button type="button" class="close-btn" aria-label="Close">&times;</button>
       </div>
       <div class="modal-content"></div>
     </div>
   </div>
 
   <!--Removed Icons Window-->
-  <div class="modal" id="removed-modal">
+  <div class="modal" id="removed-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="removed-modal-title">
     <div class="modal-container">
       <div class="modal-header">
-        <span class="modal-text">Removed Icons</span>
+        <span class="modal-text" id="removed-modal-title">Removed Icons</span>
         <p><i>(Click icons to unhide Icons)</i></p>
-        <span class="close-btn">&times;</span>
+        <button type="button" class="close-btn" aria-label="Close">&times;</button>
       </div>
       <div class="modal-content2"></div>
     </div>
   </div>
 
   <!--Import Checklist Window-->
-  <div class="modal" id="import-modal">
+  <div class="modal" id="import-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="import-modal-title">
     <div class="modal-container">
       <div class="modal-header">
         <p class="warning">WARNING: Importing will overwrite BOTH checklists.</p>
-        <span class="modal-text">Import Checklist</span>
+        <span class="modal-text" id="import-modal-title">Import Checklist</span>
       </div>
       <div class="modal-content3">
+        <label class="visually-hidden" for="import-text">Checklist code</label>
         <input type="text" class="textarea" id="import-text" placeholder="Enter your code here">
         <div class="modal-action">
-          <button class="close-btn btn-error">Cancel</button>
-          <button class="btn" id="import-btn">Import</button>
+          <button type="button" class="close-btn btn-error">Cancel</button>
+          <button type="button" class="btn" id="import-btn">Import</button>
         </div>
-        <div id="imported">Checklist imported!</div>
-        <div id="undefined">Invalid data, please generate a new export.</div>
+        <div id="imported" role="status">Checklist imported!</div>
+        <div id="import-error" role="status">Invalid or outdated code, please generate a new export.</div>
       </div>
     </div>
   </div>
 
   <!--Export Checklist Window-->
-  <div class="modal" id="export-modal">
+  <div class="modal" id="export-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="export-modal-title">
     <div class="modal-container">
       <div class="modal-header">
-        <span class="modal-text">Export Checklist</span>
+        <span class="modal-text" id="export-modal-title">Export Checklist</span>
       </div>
       <div class="modal-content3">
-        <input type="text" class="textarea" id="export-text" onclick="this.setSelectionRange(0, this.value.length)">
+        <label class="visually-hidden" for="export-text">Your checklist code</label>
+        <input type="text" class="textarea" id="export-text" readonly>
         <div class="modal-action">
-          <button class="close-btn btn-error">Cancel</button>
-          <button class="btn" id="copy-export">Copy</button>
+          <button type="button" class="close-btn btn-error">Cancel</button>
+          <button type="button" class="btn" id="copy-export">Copy</button>
         </div>
-        <div id="display-copied">Copied to clipboard!</div>
+        <div id="display-copied" role="status">Copied to clipboard!</div>
       </div>
     </div>
   </div>
 
   <!--Main Icons Container-->
   <div class="container2">
-    <div class="switch-group">
-      <input id="show-alt-art" type="checkbox">
-      <span class="tooltip">- toggle alt art</span>
+    <button id="toggleButton" type="button" aria-label="Switch checklist"></button>
+    <div id="icon-container">
+      <div id="special"></div>
     </div>
-
-    <button id="toggleButton"></button>
-      <div id="icon-container">
-        <div id="special"></div>
-      </div>
   </div>
+
+  <footer>
+    <div>
+      2022 - <span id="year"></span>.
+      Created by <a href="https://www.reddit.com/message/compose/?to=antonlabz&amp;subject=Dokkan%20LR%20Checklist">antonlabz</a>.
+    </div>
+  </footer>
 
 </body>
-
-<footer>
-  <div>
-    2022 - <script>document.write(new Date().getFullYear());</script>.
-    Created by <a href="https://www.reddit.com/message/compose/?to=antonlabz&subject=Dokkan%20LR%20Checklist">antonlabz</a>.</a>
-  </div>
-</footer>
-
 </html>
