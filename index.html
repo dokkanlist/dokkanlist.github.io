@@ -23,8 +23,8 @@
 
   <!--stylesheets-->
   <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
-  <link rel="stylesheet" href="css/style.css?v=555ac329" type="text/css" media="all">
-  <link rel="stylesheet" href="css/flairs.css?v=555ac329" type="text/css" media="all">
+  <link rel="stylesheet" href="css/style.css?v=2616b944" type="text/css" media="all">
+  <link rel="stylesheet" href="css/flairs.css?v=2616b944" type="text/css" media="all">
 
   <!--scripts (pinned + SRI so a CDN release cannot silently break the page)-->
   <script defer
@@ -39,12 +39,12 @@
           src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"
           integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy"
           crossorigin="anonymous"></script>
-  <script defer src="js/lz-string.js?v=555ac329"></script>
-  <script defer src="js/scripts.js?v=555ac329"></script>
+  <script defer src="js/lz-string.js?v=2616b944"></script>
+  <script defer src="js/scripts.js?v=2616b944"></script>
 
 </head>
 
-<body data-build="555ac329">
+<body data-build="2616b944">
   <noscript>JavaScript is required to run this page.</noscript>
 
   <div id="header"></div>
@@ -70,12 +70,21 @@
         <button type="button" data-value="int" aria-pressed="false">INT</button>
       </div>
 
-      <div id="eza-filter" class="filter-bar" role="group" aria-label="Filter by EZA status">
-        <button type="button" data-value="" aria-pressed="true" class="active">All</button>
-        <button type="button" data-value="eza" aria-pressed="false">EZA</button>
-        <button type="button" data-value="eza2" aria-pressed="false">Super EZA</button>
-        <button type="button" data-value="both" aria-pressed="false">Any EZA</button>
-        <button type="button" data-value="none" aria-pressed="false">No EZA</button>
+      <!--Two separate filters sharing a line, split by a divider.-->
+      <div class="filter-row">
+        <div id="eza-filter" class="filter-bar" role="group" aria-label="Filter by EZA status">
+          <button type="button" data-value="" aria-pressed="true" class="active">All</button>
+          <button type="button" data-value="eza" aria-pressed="false">EZA</button>
+          <button type="button" data-value="eza2" aria-pressed="false">Super EZA</button>
+          <button type="button" data-value="both" aria-pressed="false">Any EZA</button>
+          <button type="button" data-value="none" aria-pressed="false">No EZA</button>
+        </div>
+
+        <!--Shown only for modes whose data file declares an "f2p" list (LR).
+            A lone on/off toggle, independent of the EZA choice above.-->
+        <div id="f2p-filter" class="filter-bar filter-bar-split" role="group" aria-label="Free-to-play filter" hidden>
+          <button type="button" data-value="f2p" aria-pressed="false">F2P Only</button>
+        </div>
       </div>
     </div>
 

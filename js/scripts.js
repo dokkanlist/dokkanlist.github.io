@@ -180,6 +180,10 @@ function normaliseData(raw) {
     typeOf,
     eza: new Set(parseRanges(raw.eza)),
     eza2: new Set(parseRanges(raw.eza2)),
+    f2p: new Set(parseRanges(raw.f2p)),
+    // Declaring an "f2p" key opts a mode into the F2P filter, so an empty list
+    // still shows the bar while a mode that omits the key entirely hides it.
+    hasF2p: typeof raw.f2p === 'string',
     altArt: new Set(Array.isArray(raw.altArt) ? raw.altArt : [])
   };
 }
@@ -187,7 +191,11 @@ function normaliseData(raw) {
 async function loadModeData(mode) {
   if (modeData[mode]) return modeData[mode];
   const url = MODE_SOURCES[mode] + (buildId ? `?v=${buildId}` : '');
-  const response = await fetch(url);
+  // no-cache = always revalidate with the server (a cheap 304 when unchanged).
+  // The data files are the ones edited most often and are only ~2KB, so this
+  // means a data edit shows up on a plain refresh even if --stamp was skipped,
+  // instead of the browser silently serving the previous list from cache.
+  const response = await fetch(url, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`${MODE_SOURCES[mode]} responded ${response.status}`);
   modeData[mode] = normaliseData(await response.json());
   return modeData[mode];
@@ -232,6 +240,7 @@ function renderGrid() {
     if (type) flair.classList.add('type-' + type);
     if (data.eza.has(id)) flair.classList.add('eza');
     if (data.eza2.has(id)) flair.classList.add('eza2', 'glow-pulse');
+    if (data.f2p.has(id)) flair.classList.add('f2p');
     if (data.altArt.has(id)) flair.classList.add('has-alt');
 
     setIconArt(flair, id);
@@ -287,9 +296,10 @@ function showLoadError(err) {
 
 /* --- Filters --------------------------------------------- */
 
-// Two independent axes; an icon must satisfy both to stay visible.
+// Independent axes; an icon must satisfy all of them to stay visible.
 let ezaFilter = '';   // '' | 'eza' | 'eza2' | 'both' | 'none'
 let typeFilter = '';  // '' | 'agl' | 'teq' | 'str' | 'phy' | 'int'
+let f2pFilter = '';   // '' | 'f2p' - a lone on/off toggle
 
 function matchesFilters(flair) {
   const isEza = flair.classList.contains('eza');
@@ -301,6 +311,8 @@ function matchesFilters(flair) {
     case 'both': if (!isEza && !isEza2) return false; break;
     case 'none': if (isEza || isEza2) return false; break;
   }
+
+  if (f2pFilter === 'f2p' && !flair.classList.contains('f2p')) return false;
   if (typeFilter && !flair.classList.contains('type-' + typeFilter)) return false;
   return true;
 }
@@ -317,12 +329,31 @@ function isVisible(flair) {
   return !flair.classList.contains('disabled') && flair.style.display !== 'none';
 }
 
-// Both bars are single-choice groups over the same button markup, so they share
-// one implementation. Each entry reads and writes its own filter variable.
+// Each bar is a single-choice group over the same button markup, so they share
+// one implementation. Each entry reads and writes its own filter variable, and
+// an optional enabledFor() hides the bar for modes the filter does not apply to.
 const FILTER_BARS = [
   { id: 'type-filter', read: () => typeFilter, write: value => { typeFilter = value; } },
-  { id: 'eza-filter', read: () => ezaFilter, write: value => { ezaFilter = value; } }
+  { id: 'eza-filter', read: () => ezaFilter, write: value => { ezaFilter = value; } },
+  {
+    id: 'f2p-filter',
+    read: () => f2pFilter,
+    write: value => { f2pFilter = value; },
+    enabledFor: data => data.hasF2p
+  }
 ];
+
+// Called on every mode change so a bar that does not apply is both hidden and
+// cleared - a hidden-but-active filter would silently empty the grid.
+function syncFilterBarVisibility(data) {
+  for (const bar of FILTER_BARS) {
+    if (!bar.el || !bar.enabledFor) continue;
+    const enabled = bar.enabledFor(data);
+    bar.el.hidden = !enabled;
+    if (!enabled) bar.write('');
+  }
+  syncFilterBars();
+}
 
 function initFilterBars() {
   for (const bar of FILTER_BARS) {
@@ -353,6 +384,7 @@ function syncFilterBars() {
 function resetFilterUi() {
   ezaFilter = '';
   typeFilter = '';
+  f2pFilter = '';
   hideToggle.checked = false;
   syncFilterBars();
 }
@@ -421,6 +453,7 @@ async function setMode(mode) {
     : 'Switch to the DFE checklist');
 
   altArtToggle.checked = store.altArt;
+  syncFilterBarVisibility(data);
   renderChangelog(data);
   renderGrid();
 }

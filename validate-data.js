@@ -147,6 +147,24 @@ function checkMode(file) {
     warn(scope, `${summarise(superOnly)} are in eza2 but not eza — a Super EZA usually implies an EZA`);
   }
 
+  // --- F2P (optional: only modes that declare the key take part) ---
+  let f2pCount = null;
+  if (data.f2p !== undefined) {
+    if (typeof data.f2p !== 'string') {
+      error(scope, 'f2p must be a range string, e.g. "1-3, 7, 10-12"');
+    } else {
+      const ids = parseRanges(data.f2p, scope, 'f2p');
+      const seenF2p = new Set();
+      for (const id of ids) {
+        if (seenF2p.has(id)) error(scope, `f2p lists ${id} more than once`);
+        seenF2p.add(id);
+      }
+      const outside = [...seenF2p].filter(id => id < 1 || id > total).sort((a, b) => a - b);
+      if (outside.length) error(scope, `f2p lists ${summarise(outside)}, outside 1-${total}`);
+      f2pCount = seenF2p.size;
+    }
+  }
+
   // --- alt art ---
   const altArt = Array.isArray(data.altArt) ? data.altArt : [];
   for (const id of altArt) {
@@ -171,8 +189,9 @@ function checkMode(file) {
     return `${type.toUpperCase()} ${n}`;
   }).join('  ');
 
+  const f2pNote = f2pCount === null ? '' : `   F2P ${String(f2pCount).padStart(3)}`;
   console.log(`${scope.padEnd(9)} total ${String(total).padStart(3)}   ` +
-    `EZA ${String(eza.size).padStart(3)}   Super ${String(eza2.size).padStart(2)}   ${counts}`);
+    `EZA ${String(eza.size).padStart(3)}   Super ${String(eza2.size).padStart(2)}${f2pNote}   ${counts}`);
 
   return data;
 }

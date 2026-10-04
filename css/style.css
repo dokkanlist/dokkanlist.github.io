@@ -769,6 +769,61 @@ color: #68f75b;
   gap: 4px;
 }
 
+/* The display:flex above would otherwise defeat the hidden attribute. */
+.filter-bar[hidden] {
+  display: none;
+}
+
+/* Holds two independent filter groups on one line. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 18px;
+}
+
+/* Marks the start of a separate filter sharing the row. */
+.filter-bar-split {
+  position: relative;
+  padding-left: 18px;
+}
+
+/* Cyan to match the F2P group it introduces (it was the button-border navy
+   before, at about 2:1 contrast - nearly invisible). Solid through the middle
+   with faded ends, so it reads as a divider rather than a hard bar. */
+.filter-bar-split::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2px;
+  height: 28px;
+  margin-top: -14px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to bottom,
+    rgba(110, 232, 253, 0),
+    rgba(110, 232, 253, .8) 25%,
+    rgba(110, 232, 253, .8) 75%,
+    rgba(110, 232, 253, 0)
+  );
+}
+
+/* Below this the row cannot fit both groups, and the divider would be stranded
+   at the start of the wrapped line. Measured: EZA bar 321px + 18px gap + F2P
+   toggle 92px = 431px of content, plus the body margin and .buttons padding.
+   The colour difference still marks the two filters as separate. */
+@media only screen and (max-width: 460px) {
+  .filter-bar-split {
+    padding-left: 0;
+  }
+
+  .filter-bar-split::before {
+    display: none;
+  }
+}
+
 .filter-bar button {
   margin-right: 0;
   padding: 5px 10px;
@@ -783,6 +838,11 @@ color: #68f75b;
    is pinned here where the id guarantees it wins. */
 #type-filter button,
 #eza-filter button { color: #9fb6d8; }
+
+/* Cyan rather than the neutral grey-blue, so the F2P toggle reads as a
+   separate filter from the EZA group it shares a line with. Not one of the
+   five type colours, to avoid implying a type. */
+#f2p-filter button { color: #6ee8fd; }
 
 #type-filter button[data-value="agl"] { color: #3f87ef; }
 #type-filter button[data-value="teq"] { color: #68f75b; }
@@ -800,6 +860,28 @@ color: #68f75b;
   border-color: currentColor;
   box-shadow: 0 0 6px currentColor;
   background: #0d2038;
+}
+
+/* F2P is a lone on/off switch, not a pick-one group like the bars beside it,
+   so "on" uses a different visual language: a solid inverted fill instead of
+   the outlined glow the radio-style bars use. The fill is a light/dark swap,
+   not just a hue change, so the state reads without relying on colour.
+   Id-scoped so it outranks both .filter-bar button.active and the generic
+   button:hover, including while the active toggle is hovered. */
+#f2p-filter button {
+  transition: background-color .15s, color .15s, box-shadow .15s, border-color .15s;
+}
+
+#f2p-filter button.active {
+  background: #6ee8fd;
+  color: #04202b;
+  border-color: #6ee8fd;
+  box-shadow: 0 0 6px #6ee8fd, 0 0 16px rgba(110, 232, 253, .6);
+}
+
+#f2p-filter button.active:hover {
+  background: #a4f3ff;
+  border-color: #a4f3ff;
 }
 
 
