@@ -5,7 +5,7 @@
   "favicon": "stone.ico",
   "iconDir": "images/dfe",
   "idSuffix": "b",
-  "total": 145,
+  "total": 146,
 
   "types": {
     "agl": "4,11,14,20,26,29,44,46,50,53,55,61,66,70,79,86,89,93,97,102,107,114,117,120,124,130,137,139,141-142",
@@ -22,6 +22,7 @@
 
   "changelog": [
     "Added type filters",
-    "TEQ SSJ Future Trunks EZA"
+    "TEQ SSJ Future Trunks EZA",
+    "TEQ Great Saiyaman 2"
   ]
 }
