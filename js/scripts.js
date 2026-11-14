@@ -613,20 +613,42 @@ function showRemoved() {
   }
 
   for (const id of hidden) {
-    const icon = document.createElement('img');
-    icon.className = 'flair';
-    icon.dataset.id = String(id);
-    icon.src = `${data.iconDir}/icons/${id}.webp`;
-    icon.alt = `Icon ${id}`;
-    box.appendChild(icon);
+    box.appendChild(LAYERED ? createRemovedTile(id) : createRemovedIcon(id));
   }
 
   openModal('removed-modal');
 }
 
+// One entry in the removed-icons list, flat version: the finished icon.
+function createRemovedIcon(id) {
+  const data = modeData[store.mode];
+  const icon = document.createElement('img');
+  icon.className = 'flair';
+  icon.dataset.id = String(id);
+  icon.src = `${data.iconDir}/icons/${id}.webp`;
+  icon.alt = `Icon ${id}`;
+  return icon;
+}
+
+// One entry in the removed-icons list, layered version: a small tile built
+// from the same layers as the grid, labelled for screen readers.
+function createRemovedTile(id) {
+  const data = modeData[store.mode];
+  const type = data.typeOf.get(id);
+  const tile = document.createElement('div');
+  tile.className = 'flair layered';
+  if (type) tile.classList.add('type-' + type);
+  tile.dataset.id = String(id);
+  tile.setAttribute('role', 'img');
+  tile.setAttribute('aria-label', `Icon ${id}`);
+  buildLayers(tile, id, type);
+  return tile;
+}
+
 function initRemovedModal() {
   document.querySelector('.modal-content2').addEventListener('click', event => {
-    const icon = event.target.closest('img[data-id]');
+    // Matches the flat <img> and the layered tile alike.
+    const icon = event.target.closest('[data-id]');
     if (!icon) return;
     store.hidden[store.mode].delete(Number(icon.dataset.id));
     saveStore();
@@ -678,8 +700,10 @@ function toast(selector) {
 
 // html-to-image cannot render ::after with a var() background, so the icon art
 // is temporarily re-added as a real <img> sitting above the lightning overlay.
+// Layered tiles are already made of real images, so they need no patching.
 function prepareForCapture() {
-  for (const flair of document.querySelectorAll('.flair.glow-pulse')) {
+  const patched = LAYERED ? [] : document.querySelectorAll('.flair.glow-pulse');
+  for (const flair of patched) {
     const background = flair.style.getPropertyValue('--flair-bg');
     const match = background && background.match(/url\(["']?(.+?)["']?\)/);
     if (!match) continue;
@@ -693,9 +717,23 @@ function prepareForCapture() {
   document.documentElement.classList.add('capturing');
 }
 
+// Undoes prepareForCapture().
 function restoreAfterCapture() {
   for (const image of document.querySelectorAll('.capture-icon-img')) image.remove();
   document.documentElement.classList.remove('capturing');
+}
+
+// Runs one capture of the icon grid and always restores the page afterwards.
+// `method` is the html-to-image function to use ('toPng' or 'toBlob');
+// `extraOptions` are merged over CAPTURE_OPTIONS. Shared by the on-screen
+// preview and the download so the two cannot drift apart.
+async function captureGrid(method, extraOptions) {
+  prepareForCapture();
+  try {
+    return await htmlToImage[method](iconContainer, Object.assign({}, CAPTURE_OPTIONS, extraOptions));
+  } finally {
+    restoreAfterCapture();
+  }
 }
 
 const CAPTURE_OPTIONS = {
@@ -720,12 +758,11 @@ async function generateImage() {
   openModal('image-modal');
   if (reportMissingLibrary(box)) return;
 
-  prepareForCapture();
   try {
-    const dataUrl = await htmlToImage.toPng(iconContainer, Object.assign({}, CAPTURE_OPTIONS, {
+    const dataUrl = await captureGrid('toPng', {
       skipAutoScale: false,
       style: { transform: 'scale(1)', transformOrigin: 'top left' }
-    }));
+    });
     const image = new Image();
     image.src = dataUrl;
     image.alt = 'Checklist export';
@@ -735,8 +772,6 @@ async function generateImage() {
   } catch (err) {
     console.error('Image generation failed:', err);
     box.textContent = 'Image generation failed. See the browser console for details.';
-  } finally {
-    restoreAfterCapture();
   }
 }
 
@@ -746,15 +781,12 @@ async function downloadImage() {
     return;
   }
 
-  prepareForCapture();
   try {
-    const blob = await htmlToImage.toBlob(iconContainer, CAPTURE_OPTIONS);
+    const blob = await captureGrid('toBlob');
     if (blob) window.saveAs(blob, 'checklist.png');
     else console.error('Image blob generation failed.');
   } catch (err) {
     console.error('Download failed:', err);
-  } finally {
-    restoreAfterCapture();
   }
 }
 
