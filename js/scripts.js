@@ -24,6 +24,26 @@ const COMMIT_API = 'https://api.github.com/repos/dokkanlist/dokkanlist.github.io
 
 const FLIP_HALF_MS = 150;
 
+/* --- Layered tiles (trial, behind a switch) --------------- */
+
+// Add ?layered=1 to the page address to draw every tile from separate layers
+// (frame, raw thumb, rarity badge, class + type badge) instead of one flat
+// icon. Without it the page behaves exactly as before.
+const LAYERED = new URLSearchParams(window.location.search).get('layered') === '1';
+
+// Per-unit facts the layered tiles need (game id, class, thumb offset),
+// keyed by the same unit numbers as the main data files.
+const UNIT_SOURCES = { lr: 'data/lr.units.json', dfe: 'data/dfe.units.json' };
+
+// Shared layer images, named as in the game files.
+const LAYER_DIR = 'images/layers';
+// The game numbers the five types in this order in its file names.
+const GAME_TYPE_INDEX = { agl: 0, teq: 1, int: 2, str: 3, phy: 4 };
+// First digit of a class + type badge file: 1 = Super, 2 = Extreme.
+const GAME_CLASS_DIGIT = { super: 1, extreme: 2 };
+// Rarity badge shown on each side of the checklist.
+const RARITY_BADGE = { lr: 'cha_rare_lr.png', dfe: 'cha_rare_ur.png' };
+
 /* --- Range helpers --------------------------------------- */
 
 // parseRanges("1-3,7") -> [1,2,3,7] and formatRanges([1,2,3,7]) -> "1-3,7".
@@ -164,8 +184,20 @@ async function loadModeData(mode) {
   // instead of the browser silently serving the previous list from cache.
   const response = await fetch(url, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`${MODE_SOURCES[mode]} responded ${response.status}`);
-  modeData[mode] = normaliseData(await response.json());
+  const data = normaliseData(await response.json());
+  // Layered tiles also need the per-unit sidecar. Only fetched when the
+  // switch is on, so the normal page makes no extra request.
+  if (LAYERED) data.units = await loadUnits(mode);
+  modeData[mode] = data;
   return modeData[mode];
+}
+
+// Fetches data/<mode>.units.json: { "<n>": { id, class, tx, ty, alt? } }.
+async function loadUnits(mode) {
+  const url = UNIT_SOURCES[mode] + (buildId ? `?v=${buildId}` : '');
+  const response = await fetch(url, { cache: 'no-cache' });
+  if (!response.ok) throw new Error(`${UNIT_SOURCES[mode]} responded ${response.status}`);
+  return response.json();
 }
 
 /* --- Elements (assigned on DOMContentLoaded) ------------- */
@@ -175,7 +207,62 @@ let hideToggle, altArtToggle;
 
 /* --- Rendering ------------------------------------------- */
 
+// Creates one layer image for a layered tile. Layers are decorative (the tile
+// itself is the checkbox), so they carry no alt text and ignore the pointer.
+function createLayer(name, src) {
+  const image = document.createElement('img');
+  image.className = `layer layer-${name}`;
+  image.alt = '';
+  image.draggable = false;
+  image.decoding = 'async';
+  if (src) image.src = src;
+  return image;
+}
+
+// Fills a layered tile with its four stacked images, back to front:
+// type frame, raw thumb, rarity badge, class + type badge. Sizes and positions
+// of the shared layers come from CSS (see "Layered tiles" in css/style.css);
+// only the thumb is placed per unit, by setLayeredThumb().
+function buildLayers(flair, id, type) {
+  const data = modeData[store.mode];
+  const unit = data.units[id];
+  const typeIndex = GAME_TYPE_INDEX[type];
+
+  if (typeIndex !== undefined) {
+    flair.appendChild(createLayer('frame', `${LAYER_DIR}/cha_base_0${typeIndex}_04.png`));
+  }
+  flair.appendChild(createLayer('thumb'));
+  flair.appendChild(createLayer('rarity', `${LAYER_DIR}/${RARITY_BADGE[store.mode]}`));
+  if (typeIndex !== undefined && unit && GAME_CLASS_DIGIT[unit.class]) {
+    const code = `${GAME_CLASS_DIGIT[unit.class]}${typeIndex}`;
+    flair.appendChild(createLayer('type', `${LAYER_DIR}/cha_type_icon_${code}.png`));
+  }
+  setLayeredThumb(flair, id);
+}
+
+// Points a layered tile's thumb at the normal or alt art file and applies that
+// art's own offset. The offset is stored in pixels of the original icon canvas
+// and handed to CSS as --tx / --ty, which converts it to a percentage.
+function setLayeredThumb(flair, id) {
+  const data = modeData[store.mode];
+  const thumb = flair.querySelector('.layer-thumb');
+  const unit = data.units[id];
+  if (!thumb || !unit) return;
+
+  const useAlt = store.altArt && data.altArt.has(id) && unit.alt;
+  const placement = useAlt ? unit.alt : unit;
+  thumb.src = `${data.iconDir}/thumbs/${id}${useAlt ? '_alt' : ''}.png`;
+  thumb.style.setProperty('--tx', String(placement.tx));
+  thumb.style.setProperty('--ty', String(placement.ty));
+}
+
+// Sets (or swaps, for the alt art toggle) the art shown on a tile.
 function setIconArt(flair, id) {
+  if (LAYERED) {
+    setLayeredThumb(flair, id);
+    return;
+  }
+
   const data = modeData[store.mode];
   const suffix = store.altArt && data.altArt.has(id) ? '_alt' : '';
 
@@ -210,12 +297,18 @@ function renderGrid() {
     if (data.f2p.has(id)) flair.classList.add('f2p');
     if (data.altArt.has(id)) flair.classList.add('has-alt');
 
-    setIconArt(flair, id);
-
+    // The lightning strip goes in first so it sits behind the art.
     if (data.eza2.has(id) && type) {
       const overlay = document.createElement('div');
       overlay.className = `lightning-overlay lightning-${type}`;
       flair.appendChild(overlay);
+    }
+
+    if (LAYERED) {
+      flair.classList.add('layered');
+      buildLayers(flair, id, type);
+    } else {
+      setIconArt(flair, id);
     }
     fragment.appendChild(flair);
   }

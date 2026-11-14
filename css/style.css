@@ -732,6 +732,89 @@ color: #68f75b;
   }
 }
 
+/* ═══ Layered tiles ═══ */
+/* Used only when the page is opened with ?layered=1 (see LAYERED in
+   js/scripts.js). Each tile is built from four stacked images instead of one
+   flat icon: type frame, raw thumb, rarity badge, class + type badge.
+
+   All numbers below are pixels on the original icon canvas (255 px square on
+   the LR side, 263 px on the DFE side), measured by fitting the layers onto
+   the existing flat icons. The rules further down divide by --canvas, so the
+   layers scale with the tile at every breakpoint and nothing here needs
+   retuning when the tile size changes. */
+.lr {
+  --canvas: 255;
+  --frame-size: 190;  --frame-x: 31;     --frame-y: 41;
+  --type-size: 99.7;  --type-x: 160.4;   --type-y: 6.4;
+  --rarity-width: 141; --rarity-x: -20;  --rarity-y: 161;
+}
+
+.dfe {
+  --canvas: 263;
+  --frame-size: 203;  --frame-x: 33;     --frame-y: 30;
+  --type-size: 104.8; --type-x: 162.4;   --type-y: -0.6;
+  --rarity-width: 177; --rarity-x: -41;  --rarity-y: 150;
+}
+
+/* The flat icon is not used on a layered tile. */
+.flair.layered {
+  background-image: none !important;
+}
+
+/* Every layer is pinned inside the tile and ignores the pointer, so clicks
+   still land on the tile itself. Equal z-index means they stack in document
+   order (frame, thumb, rarity, type), above the lightning strip (z-index 0)
+   and below the EZA badge (z-index 3). */
+.flair.layered .layer {
+  position: absolute;
+  z-index: 1;
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.flair.layered .layer-frame {
+  left: calc(var(--frame-x) / var(--canvas) * 100%);
+  top: calc(var(--frame-y) / var(--canvas) * 100%);
+  width: calc(var(--frame-size) / var(--canvas) * 100%);
+}
+
+/* The raw thumb is 250 px on the canvas. --tx / --ty are set per unit by
+   setLayeredThumb() from data/<side>.units.json. Parts of the art are meant
+   to spill over the frame, so nothing clips it. */
+.flair.layered .layer-thumb {
+  --tx: 0;
+  --ty: 0;
+  left: calc(var(--tx) / var(--canvas) * 100%);
+  top: calc(var(--ty) / var(--canvas) * 100%);
+  width: calc(250 / var(--canvas) * 100%);
+}
+
+.flair.layered .layer-rarity {
+  left: calc(var(--rarity-x) / var(--canvas) * 100%);
+  top: calc(var(--rarity-y) / var(--canvas) * 100%);
+  width: calc(var(--rarity-width) / var(--canvas) * 100%);
+}
+
+.flair.layered .layer-type {
+  left: calc(var(--type-x) / var(--canvas) * 100%);
+  top: calc(var(--type-y) / var(--canvas) * 100%);
+  width: calc(var(--type-size) / var(--canvas) * 100%);
+}
+
+/* Super EZA tiles normally repaint the flat icon through ::after so it sits
+   above the lightning. Layered tiles already have real images there. */
+.flair.layered.glow-pulse::after {
+  display: none;
+}
+
+/* Keep the EZA and Super EZA badges above the layers on every layered tile. */
+.flair.layered::before {
+  z-index: 3;
+}
+
+
 /* ═══ Image capture ═══ */
 /* html-to-image cannot render ::after with a var() background, so scripts.js
    temporarily injects .capture-icon-img and hides ::after while capturing. */

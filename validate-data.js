@@ -29,7 +29,9 @@ const HASHED_FILES = [
   'js/scripts.js',
   'js/lz-string.js',
   'data/lr.json',
-  'data/dfe.json'
+  'data/dfe.json',
+  'data/lr.units.json',
+  'data/dfe.units.json'
 ];
 
 const errors = [];
