@@ -26,43 +26,10 @@ const FLIP_HALF_MS = 150;
 
 /* --- Range helpers --------------------------------------- */
 
-// "1-3,7,10-12" -> [1,2,3,7,10,11,12]
-function parseRanges(rangeString) {
-  const result = [];
-  for (const part of String(rangeString || '').split(',')) {
-    const token = part.trim();
-    if (!token) continue;
-
-    if (token.includes('-')) {
-      const [start, end] = token.split('-').map(Number);
-      if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
-        console.warn(`Ignoring malformed range "${token}"`);
-        continue;
-      }
-      for (let i = start; i <= end; i++) result.push(i);
-    } else {
-      const value = Number(token);
-      if (Number.isFinite(value)) result.push(value);
-      else console.warn(`Ignoring malformed value "${token}"`);
-    }
-  }
-  return result;
-}
-
-// [1,2,3,7,10,11,12] -> "1-3,7,10-12"
-function formatRanges(numbers) {
-  const sorted = [...new Set(numbers)].sort((a, b) => a - b);
-  const parts = [];
-  let i = 0;
-  while (i < sorted.length) {
-    const start = sorted[i];
-    let end = start;
-    while (i + 1 < sorted.length && sorted[i + 1] === end + 1) end = sorted[++i];
-    parts.push(start === end ? String(start) : `${start}-${end}`);
-    i++;
-  }
-  return parts.join(',');
-}
+// parseRanges("1-3,7") -> [1,2,3,7] and formatRanges([1,2,3,7]) -> "1-3,7".
+// Defined once in js/ranges.js (loaded before this file) and shared with
+// validate-data.js, so the site and the validator can never drift apart.
+const { parseRanges, formatRanges } = Ranges;
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 

@@ -1,0 +1,11 @@
+{
+  "name": "dokkanlist",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dokkan Battle checklist site (static, served by GitHub Pages). No runtime dependencies.",
+  "scripts": {
+    "validate": "node validate-data.js",
+    "stamp": "node validate-data.js --stamp",
+    "test": "node --test"
+  }
+}

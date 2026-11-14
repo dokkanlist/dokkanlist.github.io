@@ -16,6 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const Ranges = require('./js/ranges.js');
 
 const TYPES = ['agl', 'teq', 'str', 'phy', 'int'];
 const DATA_FILES = ['data/lr.json', 'data/dfe.json'];
@@ -24,6 +25,7 @@ const DATA_FILES = ['data/lr.json', 'data/dfe.json'];
 const HASHED_FILES = [
   'css/style.css',
   'css/flairs.css',
+  'js/ranges.js',
   'js/scripts.js',
   'js/lz-string.js',
   'data/lr.json',
@@ -36,31 +38,12 @@ const warnings = [];
 function error(scope, message) { errors.push(`${scope}: ${message}`); }
 function warn(scope, message) { warnings.push(`${scope}: ${message}`); }
 
-// Keep this in step with parseRanges() in js/scripts.js.
+// Parses a range string with the same code the site uses (js/ranges.js), and
+// records every rejected token as a validation error against `scope` / `field`.
 function parseRanges(rangeString, scope, field) {
-  const result = [];
-  for (const part of String(rangeString || '').split(',')) {
-    const token = part.trim();
-    if (!token) continue;
-
-    if (token.includes('-')) {
-      const [start, end] = token.split('-').map(Number);
-      if (!Number.isFinite(start) || !Number.isFinite(end)) {
-        error(scope, `${field} contains a malformed range "${token}"`);
-        continue;
-      }
-      if (end < start) {
-        error(scope, `${field} range "${token}" runs backwards`);
-        continue;
-      }
-      for (let i = start; i <= end; i++) result.push(i);
-    } else {
-      const value = Number(token);
-      if (Number.isFinite(value)) result.push(value);
-      else error(scope, `${field} contains a malformed value "${token}"`);
-    }
-  }
-  return result;
+  return Ranges.parseRanges(rangeString, {
+    onError: message => error(scope, `${field}: ${message}`)
+  });
 }
 
 function listIcons(dir) {

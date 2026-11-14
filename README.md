@@ -44,6 +44,19 @@ non-zero if anything is wrong. `--stamp` also refreshes the cache-busting build
 id in `index.html`, so returning visitors get the new CSS/JS instead of a
 stale cached copy — run it whenever you change `css/`, `js/`, or `data/`.
 
+The same commands are available as npm scripts (nothing to install, there are
+no dependencies):
+
+```
+npm run validate   # node validate-data.js
+npm run stamp      # node validate-data.js --stamp
+npm test           # unit tests for the shared range parser (js/ranges.js)
+```
+
+`js/ranges.js` holds the one range-string parser used by both the site and the
+validator. It only accepts whole numbers and `start-end` ranges, and refuses
+ranges above 10,000 so a damaged save or import code cannot freeze the page.
+
 ### Running locally
 
 The data files are loaded with `fetch()`, which browsers block on `file://`
