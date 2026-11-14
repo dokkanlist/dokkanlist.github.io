@@ -64,6 +64,127 @@ function summarise(numbers, limit = 12) {
   return numbers.length > limit ? `${shown} … (${numbers.length} total)` : shown;
 }
 
+// Shared layer images every tile is built from (original game file names).
+// Frames are per type; class + type badges are per class and type; the rarity
+// badge is one per side.
+const LAYER_DIR = 'images/layers';
+const LAYER_FILES = [
+  ...[0, 1, 2, 3, 4].map(t => `cha_base_0${t}_04.png`),
+  ...[1, 2].flatMap(c => [0, 1, 2, 3, 4].map(t => `cha_type_icon_${c}${t}.png`)),
+  'cha_rare_lr.png',
+  'cha_rare_ur.png'
+];
+const CLASSES = ['super', 'extreme'];
+const UNIT_KEYS = ['id', 'class', 'tx', 'ty', 'alt'];
+const ALT_KEYS = ['id', 'tx', 'ty'];
+// Thumb offsets are small nudges in pixels; anything larger is a typing slip.
+const MAX_OFFSET = 40;
+
+// Checks that every shared layer image exists. Run once, not per side.
+function checkLayers() {
+  for (const name of LAYER_FILES) {
+    if (!fs.existsSync(path.join(LAYER_DIR, name))) error('layers', `${LAYER_DIR}/${name} is missing`);
+  }
+}
+
+// Checks one thumb placement object ({ id, tx, ty }) inside a units file.
+// `seenIds` collects game ids so a duplicate anywhere in the file is caught.
+function checkPlacement(scope, label, entry, seenIds) {
+  if (!Number.isInteger(entry.id) || entry.id < 1000000 || entry.id > 9999999) {
+    error(scope, `${label}: id must be a 7 digit game card id`);
+  } else if (seenIds.has(entry.id)) {
+    error(scope, `${label}: id ${entry.id} is already used by ${seenIds.get(entry.id)}`);
+  } else {
+    seenIds.set(entry.id, label);
+  }
+  for (const axis of ['tx', 'ty']) {
+    if (!Number.isInteger(entry[axis]) || Math.abs(entry[axis]) > MAX_OFFSET) {
+      error(scope, `${label}: ${axis} must be a whole number between -${MAX_OFFSET} and ${MAX_OFFSET}`);
+    }
+  }
+}
+
+// Checks the raw thumbs in <iconDir>/thumbs and the units sidecar
+// (data/<side>.units.json) that the layered tiles are built from:
+// one thumb and one units entry per id in 1..total, alt art in step with
+// the altArt list, and every entry well formed.
+function checkLayered(scope, file, iconDir, total, altArt) {
+  // --- thumbs on disk ---
+  const thumbDir = path.join(iconDir, 'thumbs');
+  if (!fs.existsSync(thumbDir)) {
+    error(scope, `${iconDir}/thumbs does not exist`);
+  } else {
+    const plain = new Set();
+    const alt = new Set();
+    for (const name of fs.readdirSync(thumbDir)) {
+      const match = /^(\d+)(_alt)?\.png$/.exec(name);
+      if (!match) { error(scope, `unexpected file ${iconDir}/thumbs/${name}`); continue; }
+      (match[2] ? alt : plain).add(Number(match[1]));
+    }
+    const missing = [];
+    for (let i = 1; i <= total; i++) if (!plain.has(i)) missing.push(i);
+    if (missing.length) error(scope, `no thumb file for ${summarise(missing)}`);
+
+    const extra = [...plain].filter(i => i > total).sort((a, b) => a - b);
+    if (extra.length) warn(scope, `thumb files past total (${total}): ${summarise(extra)}`);
+
+    for (const id of altArt) {
+      if (!alt.has(id)) error(scope, `altArt lists ${id} but ${iconDir}/thumbs/${id}_alt.png is missing`);
+    }
+    const unlisted = [...alt].filter(id => !altArt.includes(id)).sort((a, b) => a - b);
+    if (unlisted.length) warn(scope, `${summarise(unlisted)} have _alt.png thumbs but are not in altArt`);
+  }
+
+  // --- units sidecar ---
+  const unitsFile = file.replace(/\.json$/, '.units.json');
+  const unitsScope = path.basename(unitsFile);
+  let units;
+  try {
+    units = JSON.parse(fs.readFileSync(unitsFile, 'utf8'));
+  } catch (err) {
+    error(unitsScope, `could not be read as JSON - ${err.message}`);
+    return;
+  }
+  if (!units || typeof units !== 'object' || Array.isArray(units)) {
+    error(unitsScope, 'must be an object keyed by unit number');
+    return;
+  }
+
+  const missingUnits = [];
+  for (let i = 1; i <= total; i++) if (!(String(i) in units)) missingUnits.push(i);
+  if (missingUnits.length) error(unitsScope, `no entry for ${summarise(missingUnits)}`);
+
+  const seenIds = new Map();
+  for (const [key, unit] of Object.entries(units)) {
+    const label = `unit ${key}`;
+    const number = Number(key);
+    if (!/^\d+$/.test(key) || number < 1 || number > total) {
+      error(unitsScope, `${label}: key is not a unit number in 1-${total}`);
+      continue;
+    }
+    if (!unit || typeof unit !== 'object') { error(unitsScope, `${label}: must be an object`); continue; }
+
+    for (const field of Object.keys(unit)) {
+      if (!UNIT_KEYS.includes(field)) error(unitsScope, `${label}: unknown field "${field}"`);
+    }
+    if (!CLASSES.includes(unit.class)) {
+      error(unitsScope, `${label}: class must be one of ${CLASSES.join(', ')}`);
+    }
+    checkPlacement(unitsScope, label, unit, seenIds);
+
+    // Alt art placement must exist exactly when the unit is in altArt.
+    const wantsAlt = altArt.includes(number);
+    if (wantsAlt && !unit.alt) error(unitsScope, `${label}: is in altArt but has no "alt" entry`);
+    if (!wantsAlt && unit.alt) error(unitsScope, `${label}: has an "alt" entry but is not in altArt`);
+    if (unit.alt && typeof unit.alt === 'object') {
+      for (const field of Object.keys(unit.alt)) {
+        if (!ALT_KEYS.includes(field)) error(unitsScope, `${label} alt: unknown field "${field}"`);
+      }
+      checkPlacement(unitsScope, `${label} alt`, unit.alt, seenIds);
+    }
+  }
+}
+
 function checkMode(file) {
   const scope = path.basename(file);
   let data;
@@ -159,6 +280,9 @@ function checkMode(file) {
     warn(scope, `${summarise(unlisted)} have _alt.webp files but are not in altArt`);
   }
 
+  // --- layered tiles: raw thumbs and the units sidecar ---
+  checkLayered(scope, file, iconDir, total, altArt);
+
   // --- required text fields ---
   for (const field of ['label', 'title', 'favicon', 'iconDir']) {
     if (!data[field]) error(scope, `missing "${field}"`);
@@ -212,6 +336,8 @@ for (const file of DATA_FILES) {
   if (fs.existsSync(file)) checkMode(file);
   else error(path.basename(file), 'file not found');
 }
+
+checkLayers();
 
 if (process.argv.includes('--stamp')) stampBuildId();
 
