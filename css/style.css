@@ -266,16 +266,19 @@ border-radius:5px;
 border:1px solid #6f3;
 }
 
+/* The knob fills exactly one half of the track, edge to edge, with no gap
+   around it. Sized in percentages of the track's inside (inside the border)
+   so it stays a clean half if the switch size ever changes. */
 .slider:before {
 position:absolute;
 content:"";
-height:14px;
-width:14px;
-left:2px;
-bottom:1px;
+top:0;
+left:0;
+width:50%;
+height:100%;
 background-color:#b0ff7a;
 transition:.4s;
-border-radius:5px;
+border-radius:4px;
 }
 
 input:checked + .slider {
@@ -286,8 +289,9 @@ input:focus + .slider {
 box-shadow:0 0 1px #2196F3;
 }
 
+/* Moves the knob across to fill the other half. */
 input:checked + .slider:before {
-transform:translateX(11px);
+transform:translateX(100%);
 }
 
 /* The art picker: a thin outline around two plain words, with the caption
@@ -371,28 +375,32 @@ display:grid;
 /* minmax(0,1fr), not 1fr: a plain 1fr floors at its content width, so the
    toggle column would grow and shove the centre column off-centre. */
 grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-/* Bottom-aligned: the art picker makes the toggle column taller, and this
-   keeps the remove icons toggle level with the buttons below the picker. */
-align-items:end;
+align-items:center;
 column-gap:12px;
 margin-top:10px;
 }
 
-/* The art picker stacked above the remove icons toggle, both hard left.
-   Aligned to the bottom of the row so the toggle sits level with the
-   centred buttons and the picker rises above them. */
+/* The art picker stacked above the remove icons toggle, both hard left. Only
+   the toggle takes up room in the row; the picker is lifted out of the flow
+   (below) into the empty space left of the centred filter bars, so the row
+   stays the height of the buttons and no blank band opens above them. */
 .toggle-row {
+position:relative;
 grid-column:1;
 justify-self:start;
-align-self:end;
 display:flex;
 flex-direction:column;
 align-items:flex-start;
 gap:10px;
 max-width:100%;
-/* The toggle (20px) is shorter than the buttons (31px); this lifts its
-   middle level with theirs. */
-margin-bottom:5px;
+}
+
+/* Wide screens only: sits just above the toggle. The stacked layout puts it
+   back in the flow (see the max-width 920px block). */
+.toggle-row .art-picker {
+position:absolute;
+left:0;
+bottom:calc(100% + 8px);
 }
 
 /* Inside the toggle row the labels sit directly beside their switches, so
@@ -922,7 +930,8 @@ font-weight: 700;
   padding-left: 18px;
 }
 
-/* Cyan to match the F2P group it introduces (it was the button-border navy
+/* The divider before a second filter on a row (F2P after EZA, class after
+   type). Cyan to match the F2P group (it was the button-border navy
    before, at about 2:1 contrast - nearly invisible). Solid through the middle
    with faded ends, so it reads as a divider rather than a hard bar. */
 .filter-bar-split::before {
@@ -943,11 +952,12 @@ font-weight: 700;
   );
 }
 
-/* Below this the row cannot fit both groups, and the divider would be stranded
-   at the start of the wrapped line. Measured: EZA bar 321px + 18px gap + F2P
-   toggle 92px = 431px of content, plus the body margin and .buttons padding.
-   The colour difference still marks the two filters as separate. */
-@media only screen and (max-width: 460px) {
+/* Below this a row cannot fit both its groups, and the divider would be
+   stranded at the start of the wrapped line. Measured: the wider row is type
+   323px + 18px gap + class 147px = 488px of content (EZA + F2P is 431px), plus
+   the body margin and .buttons padding. The colour difference still marks the
+   filters as separate. */
+@media only screen and (max-width: 520px) {
   .filter-bar-split {
     padding-left: 0;
   }
@@ -970,7 +980,8 @@ font-weight: 700;
    colour and ties on specificity with `.filter-bar button`, so the text colour
    is pinned here where the id guarantees it wins. */
 #type-filter button,
-#eza-filter button { color: #9fb6d8; }
+#eza-filter button,
+#class-filter button { color: #9fb6d8; }
 
 /* Cyan rather than the neutral grey-blue, so the F2P toggle reads as a
    separate filter from the EZA group it shares a line with. Not one of the
@@ -1049,6 +1060,39 @@ font-weight: 700;
 /* The desktop layout hangs the changelog, switches, footer and mode toggle off
    absolute positions with fixed pixel offsets. Below 760px there is no room for
    that, so everything returns to normal flow and stacks. */
+/* The controls row stacks below 920px: from there down, the remove icons
+   toggle (about 180px) no longer fits beside the centred buttons (515px) and
+   its label ran underneath Select All. */
+@media only screen and (max-width: 920px) {
+  /* Stacked, but keep the desktop reading order: buttons, then the toggles
+     sitting just above the grid they act on. */
+  .controls-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .main-buttons { order: 1; }
+
+  .toggle-row {
+    order: 2;
+    width: fit-content;
+    max-width: 100%;
+    padding-left: 0;
+    justify-content: center;
+    /* Centre the picker and toggle stack instead of the desktop left. */
+    align-self: center;
+    align-items: center;
+  }
+
+  /* Back in the flow, stacked above the toggle. */
+  .toggle-row .art-picker {
+    position: relative;
+    bottom: auto;
+  }
+}
+
 @media only screen and (max-width: 760px) {
   footer,
   #changelog,
@@ -1083,28 +1127,6 @@ font-weight: 700;
 
   .container2 {
     margin-bottom: 10px;
-  }
-
-  /* Stacked, but keep the desktop reading order: buttons, then the toggles
-     sitting just above the grid they act on. */
-  .controls-row {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .main-buttons { order: 1; }
-
-  .toggle-row {
-    order: 2;
-    width: fit-content;
-    max-width: 100%;
-    padding-left: 0;
-    justify-content: center;
-    /* Centre the picker and toggle stack instead of the desktop bottom/left. */
-    align-self: center;
-    align-items: center;
   }
 
   #toggleButton {

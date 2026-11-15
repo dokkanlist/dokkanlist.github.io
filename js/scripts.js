@@ -386,6 +386,9 @@ function renderGrid() {
 
     const type = data.typeOf.get(id);
     if (type) flair.classList.add('type-' + type);
+    // Super or Extreme, for the class filter.
+    const unitClass = data.units[id] && data.units[id].class;
+    if (unitClass) flair.classList.add('class-' + unitClass);
     if (data.eza.has(id)) flair.classList.add('eza');
     if (data.eza2.has(id)) flair.classList.add('eza2', 'glow-pulse');
     if (data.f2p.has(id)) flair.classList.add('f2p');
@@ -454,8 +457,9 @@ function showLoadError(err) {
 let ezaFilter = '';   // '' | 'eza' | 'eza2' | 'both' | 'none'
 let typeFilter = '';  // '' | 'agl' | 'teq' | 'str' | 'phy' | 'int'
 let f2pFilter = '';   // '' | 'f2p' - a lone on/off toggle
+let classFilter = ''; // '' | 'super' | 'extreme'
 
-// True if a tile passes all three filters as they are set now.
+// True if a tile passes all four filters as they are set now.
 function matchesFilters(flair) {
   const isEza = flair.classList.contains('eza');
   const isEza2 = flair.classList.contains('eza2');
@@ -469,6 +473,7 @@ function matchesFilters(flair) {
 
   if (f2pFilter === 'f2p' && !flair.classList.contains('f2p')) return false;
   if (typeFilter && !flair.classList.contains('type-' + typeFilter)) return false;
+  if (classFilter && !flair.classList.contains('class-' + classFilter)) return false;
   return true;
 }
 
@@ -491,6 +496,8 @@ function isVisible(flair) {
 // an optional enabledFor() hides the bar for modes the filter does not apply to.
 const FILTER_BARS = [
   { id: 'type-filter', read: () => typeFilter, write: value => { typeFilter = value; } },
+  // Super / Extreme: no "All" button; clicking the lit one again clears it.
+  { id: 'class-filter', read: () => classFilter, write: value => { classFilter = value; } },
   { id: 'eza-filter', read: () => ezaFilter, write: value => { ezaFilter = value; } },
   {
     id: 'f2p-filter',
@@ -546,6 +553,7 @@ function resetFilterUi() {
   ezaFilter = '';
   typeFilter = '';
   f2pFilter = '';
+  classFilter = '';
   hideToggle.checked = false;
   syncFilterBars();
 }

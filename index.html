@@ -22,8 +22,8 @@
   <link rel="icon" id="favicon" type="image/x-icon" href="stone.ico">
 
   <!--stylesheets-->
-  <link rel="stylesheet" href="css/style.css?v=deeb303a" type="text/css" media="all">
-  <link rel="stylesheet" href="css/flairs.css?v=deeb303a" type="text/css" media="all">
+  <link rel="stylesheet" href="css/style.css?v=bf6e9612" type="text/css" media="all">
+  <link rel="stylesheet" href="css/flairs.css?v=bf6e9612" type="text/css" media="all">
 
   <!--scripts (pinned + SRI so a CDN release cannot silently break the page)-->
   <script defer
@@ -34,13 +34,13 @@
           src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"
           integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy"
           crossorigin="anonymous"></script>
-  <script defer src="js/lz-string.js?v=deeb303a"></script>
-  <script defer src="js/ranges.js?v=deeb303a"></script>
-  <script defer src="js/scripts.js?v=deeb303a"></script>
+  <script defer src="js/lz-string.js?v=bf6e9612"></script>
+  <script defer src="js/ranges.js?v=bf6e9612"></script>
+  <script defer src="js/scripts.js?v=bf6e9612"></script>
 
 </head>
 
-<body data-build="deeb303a">
+<body data-build="bf6e9612">
   <noscript>JavaScript is required to run this page.</noscript>
 
   <!--Notice banner: hidden unless something needs the visitor's attention
@@ -62,15 +62,25 @@
   <span id="counter"></span>
 
   <div class="buttons">
-    <!--Filter bars. Each is a single-choice group; the two AND together.-->
+    <!--Filter bars. Each is a single-choice group; they all AND together.-->
     <div class="filter-bars">
-      <div id="type-filter" class="filter-bar" role="group" aria-label="Filter by type">
-        <button type="button" data-value="" aria-pressed="true" class="active">All Types</button>
-        <button type="button" data-value="agl" aria-pressed="false">AGL</button>
-        <button type="button" data-value="teq" aria-pressed="false">TEQ</button>
-        <button type="button" data-value="str" aria-pressed="false">STR</button>
-        <button type="button" data-value="phy" aria-pressed="false">PHY</button>
-        <button type="button" data-value="int" aria-pressed="false">INT</button>
+      <!--Type and class share a line, split by a divider.-->
+      <div class="filter-row">
+        <div id="type-filter" class="filter-bar" role="group" aria-label="Filter by type">
+          <button type="button" data-value="" aria-pressed="true" class="active">All Types</button>
+          <button type="button" data-value="agl" aria-pressed="false">AGL</button>
+          <button type="button" data-value="teq" aria-pressed="false">TEQ</button>
+          <button type="button" data-value="str" aria-pressed="false">STR</button>
+          <button type="button" data-value="phy" aria-pressed="false">PHY</button>
+          <button type="button" data-value="int" aria-pressed="false">INT</button>
+        </div>
+
+        <!--Super or Extreme class. Neither lit means both are shown; clicking
+            the lit one again clears it.-->
+        <div id="class-filter" class="filter-bar filter-bar-split" role="group" aria-label="Filter by class">
+          <button type="button" data-value="super" aria-pressed="false">Super</button>
+          <button type="button" data-value="extreme" aria-pressed="false">Extreme</button>
+        </div>
       </div>
 
       <!--Two separate filters sharing a line, split by a divider.-->
