@@ -305,17 +305,20 @@ gap:2px;
 padding:7px 8px 4px;
 border:1px solid #3d5788;
 border-radius:5px;
+/* One navy fill behind the whole panel, words included. */
+background:#0b1630;
 }
 
-/* The caption covers the outline behind it with the page background, which
-   makes the gap. It is aria-hidden in the markup, since the group's
-   aria-label already names it. */
+/* The caption covers the outline behind it, which makes the gap: page colour
+   above the line (its top 6px, as it sits 6px up) and the panel colour below.
+   It is aria-hidden in the markup, since the group's aria-label already
+   names it. */
 .art-label {
 position:absolute;
 top:-6px;
 left:8px;
 padding:0 4px;
-background:#000010;
+background:linear-gradient(to bottom, #000010 6px, #0b1630 6px);
 font-size:10px;
 font-weight:700;
 letter-spacing:.14em;
@@ -324,28 +327,27 @@ color:#b4c6ea;
 line-height:1;
 }
 
-/* The two words. The site-wide button look (green border, padding, hover
-   colour) is replaced by a soft navy fill with rounded top corners, so each
-   word reads as a small tab sitting on its underline. */
+/* The two words. The site-wide button look (green border, fill, padding,
+   hover colour) is cleared so only the text and its underline remain; the
+   panel behind them carries the background. */
 .art-picker button {
 margin:0;
 padding:2px 8px 3px;
 border:0;
 border-bottom:2px solid transparent;
-border-radius:3px 3px 0 0;
-background:#0b1630;
+border-radius:0;
+background:none;
 box-shadow:none;
 font-size:12px;
 font-weight:700;
 color:#6f82a6;
 cursor:pointer;
-transition:color .2s, border-color .2s, background-color .2s;
+transition:color .2s, border-color .2s;
 }
 
-/* The chosen word: brighter text, a lighter fill and the cyan underline. */
+/* The chosen word: brighter text and the cyan underline. */
 .art-picker button.active {
 color:#e6eeff;
-background:#17305c;
 border-bottom-color:#6ee8fd;
 }
 
@@ -353,16 +355,12 @@ border-bottom-color:#6ee8fd;
    shrink, on both words, chosen or not. */
 .art-picker button:hover,
 .art-picker button:active {
+background:none;
 transform:none;
-}
-
-.art-picker button.active:hover {
-background:#17305c;
 }
 
 .art-picker button:not(.active):hover {
 color:#b8c8e6;
-background:#122244;
 }
 
 /* Keyboard focus gets a visible ring, since the plain words have no border. */
@@ -403,7 +401,7 @@ max-width:100%;
 }
 
 /* Wide screens only: sits just above the toggle. The stacked layout puts it
-   back in the flow (see the max-width 990px block). */
+   back in the flow (see the max-width 920px block). */
 .toggle-row .art-picker {
 position:absolute;
 left:0;
@@ -424,6 +422,7 @@ grid-column:2;
 
 #counter {
 display:inline-block;
+vertical-align:top;
 color:#eee;
 font-weight:500;
 font-size:14px;
@@ -433,13 +432,45 @@ font-size:14px;
 color:#76e6fe;
 }
 
-/* Per-type progress, on its own line under the total */
+/* Per-type progress, on its own line under the total, led by the Stats
+   button. #type-counts is display:contents so each type is its own flex item
+   and wraps like before. */
 .type-breakdown {
 display:flex;
 flex-wrap:wrap;
 justify-content:center;
+align-items:center;
 gap:12px;
 margin-top:4px;
+}
+
+#type-counts {
+display:contents;
+}
+
+/* The Stats button on the counter line: a small quiet pill, so it reads as
+   part of the numbers rather than one of the big green action buttons. */
+.stats-chip {
+margin:0;
+padding:1px 9px 2px;
+border:1px solid #3d5788;
+border-radius:999px;
+background:#0b1630;
+color:#b4c6ea;
+font-size:11px;
+font-weight:700;
+letter-spacing:.06em;
+line-height:16px;
+}
+
+.stats-chip:hover {
+color:#e6eeff;
+background:#122244;
+border-color:#6ee8fd;
+}
+
+.stats-chip:active {
+transform:none;
 }
 
 .type-breakdown span {
@@ -1194,10 +1225,10 @@ color:#6f82a6;
 /* The desktop layout hangs the changelog, switches, footer and mode toggle off
    absolute positions with fixed pixel offsets. Below 760px there is no room for
    that, so everything returns to normal flow and stacks. */
-/* The controls row stacks below 990px: from there down, the remove icons
-   toggle (about 180px) no longer fits beside the centred buttons (570px with
-   Stats) and its label would run underneath Select All. */
-@media only screen and (max-width: 990px) {
+/* The controls row stacks below 920px: from there down, the remove icons
+   toggle (about 180px) no longer fits beside the centred buttons (515px) and
+   its label ran underneath Select All. */
+@media only screen and (max-width: 920px) {
   /* Stacked, but keep the desktop reading order: buttons, then the toggles
      sitting just above the grid they act on. */
   .controls-row {

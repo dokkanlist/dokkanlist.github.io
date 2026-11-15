@@ -290,7 +290,7 @@ async function loadUnits(mode) {
 /* --- Elements (assigned on DOMContentLoaded) ------------- */
 
 // Page elements used throughout the script.
-let grid, counter, changelogList, iconContainer, header, toggleButton;
+let grid, counterTotal, typeCounts, changelogList, iconContainer, header, toggleButton;
 let hideToggle, artPicker;
 
 /* --- Rendering ------------------------------------------- */
@@ -591,9 +591,10 @@ function updateCounter() {
     })
     .join('');
 
-  counter.innerHTML =
-    `<span class="cl">Total ${escapeHtml(data.label)} - </span>${chosen}/${visible}` +
-    (breakdown ? `<span class="type-breakdown">${breakdown}</span>` : '');
+  // The Stats button shares the second line and is never rebuilt here, so
+  // only the two text parts are rewritten.
+  counterTotal.innerHTML = `<span class="cl">Total ${escapeHtml(data.label)} - </span>${chosen}/${visible}`;
+  typeCounts.innerHTML = breakdown;
 }
 
 /* --- Mode switching -------------------------------------- */
@@ -1229,7 +1230,8 @@ function initArtPicker() {
 // control, then draw the saved side.
 document.addEventListener('DOMContentLoaded', async () => {
   grid = document.getElementById('special');
-  counter = document.getElementById('counter');
+  counterTotal = document.getElementById('counter-total');
+  typeCounts = document.getElementById('type-counts');
   changelogList = document.getElementById('changelog-item');
   iconContainer = document.getElementById('icon-container');
   header = document.getElementById('header');

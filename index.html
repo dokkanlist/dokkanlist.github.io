@@ -22,8 +22,8 @@
   <link rel="icon" id="favicon" type="image/x-icon" href="stone.ico">
 
   <!--stylesheets-->
-  <link rel="stylesheet" href="css/style.css?v=6dd9a54a" type="text/css" media="all">
-  <link rel="stylesheet" href="css/flairs.css?v=6dd9a54a" type="text/css" media="all">
+  <link rel="stylesheet" href="css/style.css?v=bada931c" type="text/css" media="all">
+  <link rel="stylesheet" href="css/flairs.css?v=bada931c" type="text/css" media="all">
 
   <!--scripts (pinned + SRI so a CDN release cannot silently break the page)-->
   <script defer
@@ -34,13 +34,13 @@
           src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"
           integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy"
           crossorigin="anonymous"></script>
-  <script defer src="js/lz-string.js?v=6dd9a54a"></script>
-  <script defer src="js/ranges.js?v=6dd9a54a"></script>
-  <script defer src="js/scripts.js?v=6dd9a54a"></script>
+  <script defer src="js/lz-string.js?v=bada931c"></script>
+  <script defer src="js/ranges.js?v=bada931c"></script>
+  <script defer src="js/scripts.js?v=bada931c"></script>
 
 </head>
 
-<body data-build="6dd9a54a">
+<body data-build="bada931c">
   <noscript>JavaScript is required to run this page.</noscript>
 
   <!--Notice banner: hidden unless something needs the visitor's attention
@@ -59,7 +59,15 @@
     <ul id="changelog-item"></ul>
   </div>
 
-  <span id="counter"></span>
+  <!--Counter: the total on the first line, then the Stats button and the
+      per-type numbers on the second. js/scripts.js fills the two spans.-->
+  <div id="counter">
+    <span id="counter-total"></span>
+    <div class="type-breakdown">
+      <button type="button" id="show-stats" class="stats-chip" title="Owned out of total, by type, class, EZA and F2P">Stats</button>
+      <span id="type-counts"></span>
+    </div>
+  </div>
 
   <div class="buttons">
     <!--Filter bars. Each is a single-choice group; they all AND together.-->
@@ -129,7 +137,6 @@
         <button id="select-none">Reset</button>
         <button id="list-hidden">List Removed Icons</button>
         <button id="generate">Generate Image</button>
-        <button id="show-stats">Stats</button>
         <button id="import">Import</button>
         <button id="export">Export</button>
       </div>
