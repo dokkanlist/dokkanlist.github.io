@@ -290,20 +290,29 @@ input:checked + .slider:before {
 transform:translateX(11px);
 }
 
-/* The art picker: a quiet caption ("ART") above a pick-one pair of buttons
-   that borrow the filter bar look (see "Filter bars"). Stacked, so it does
-   not take the fixed single-line switch height. */
+/* The art picker: a thin outline around two plain words, with the caption
+   ("ART") set into a gap in the top edge like a labelled panel. The chosen
+   word is bright with a cyan underline. No filled or bordered buttons, so it
+   reads as a display state and never as one of the filter bars. */
 .art-picker {
-flex-direction:column;
-align-items:flex-start;
-height:auto;
-gap:3px;
+position:relative;
+display:inline-flex;
+gap:2px;
+padding:7px 8px 4px;
+border:1px solid #22304f;
+border-radius:5px;
 }
 
-/* The caption is plain muted capitals with no border or fill, so it reads as
-   a heading for the buttons and never as something to click. */
+/* The caption covers the outline behind it with the page background, which
+   makes the gap. It is aria-hidden in the markup, since the group's
+   aria-label already names it. */
 .art-label {
-font-size:10px;
+position:absolute;
+top:-6px;
+left:8px;
+padding:0 4px;
+background:#000010;
+font-size:9px;
 font-weight:700;
 letter-spacing:.14em;
 text-transform:uppercase;
@@ -311,27 +320,37 @@ color:#7f93b5;
 line-height:1;
 }
 
-/* The two buttons butt up against each other, sharing a border. The lit or
-   hovered one is lifted so its coloured border and glow are not covered by
-   its neighbour. */
-.art-picker .filter-bar {
-gap:0;
-flex-wrap:nowrap;
+/* The two words. The site-wide button look (border, fill, padding, hover
+   colour) is cleared so only the text and its underline remain. */
+.art-picker button {
+margin:0;
+padding:1px 6px 3px;
+border:0;
+border-bottom:2px solid transparent;
+border-radius:0;
+background:none;
+box-shadow:none;
+font-size:12px;
+font-weight:700;
+color:#6f82a6;
+cursor:pointer;
+transition:color .2s, border-color .2s;
 }
 
-.art-picker .filter-bar button {
-position:relative;
-border-radius:3px 0 0 3px;
+.art-picker button.active {
+color:#e6eeff;
+border-bottom-color:#6ee8fd;
 }
 
-.art-picker .filter-bar button + button {
-margin-left:-1px;
-border-radius:0 3px 3px 0;
+.art-picker button:not(.active):hover {
+color:#b8c8e6;
+background:none;
 }
 
-.art-picker .filter-bar button.active,
-.art-picker .filter-bar button:hover {
-z-index:1;
+/* Keyboard focus gets a visible ring, since the plain words have no border. */
+.art-picker button:focus-visible {
+outline:1px solid #6ee8fd;
+outline-offset:1px;
 }
 
 /* The toggles and the action buttons share one row. A 1fr/auto/1fr grid keeps
@@ -935,8 +954,7 @@ font-weight: 700;
    colour and ties on specificity with `.filter-bar button`, so the text colour
    is pinned here where the id guarantees it wins. */
 #type-filter button,
-#eza-filter button,
-#art-picker button { color: #9fb6d8; }
+#eza-filter button { color: #9fb6d8; }
 
 /* Cyan rather than the neutral grey-blue, so the F2P toggle reads as a
    separate filter from the EZA group it shares a line with. Not one of the
