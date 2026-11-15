@@ -290,16 +290,48 @@ input:checked + .slider:before {
 transform:translateX(11px);
 }
 
-/* The art picker: a label followed by a pick-one pair of buttons that borrow
-   the filter bar look (see "Filter bars"). Taller than a switch, so it does
-   not take the fixed switch height, and its label sits before the buttons. */
+/* The art picker: a quiet caption ("ART") above a pick-one pair of buttons
+   that borrow the filter bar look (see "Filter bars"). Stacked, so it does
+   not take the fixed single-line switch height. */
 .art-picker {
+flex-direction:column;
+align-items:flex-start;
 height:auto;
+gap:3px;
 }
 
-.toggle-row .art-picker .tooltip {
-margin:0 8px 0 0;
-cursor:default;
+/* The caption is plain muted capitals with no border or fill, so it reads as
+   a heading for the buttons and never as something to click. */
+.art-label {
+font-size:10px;
+font-weight:700;
+letter-spacing:.14em;
+text-transform:uppercase;
+color:#7f93b5;
+line-height:1;
+}
+
+/* The two buttons butt up against each other, sharing a border. The lit or
+   hovered one is lifted so its coloured border and glow are not covered by
+   its neighbour. */
+.art-picker .filter-bar {
+gap:0;
+flex-wrap:nowrap;
+}
+
+.art-picker .filter-bar button {
+position:relative;
+border-radius:3px 0 0 3px;
+}
+
+.art-picker .filter-bar button + button {
+margin-left:-1px;
+border-radius:0 3px 3px 0;
+}
+
+.art-picker .filter-bar button.active,
+.art-picker .filter-bar button:hover {
+z-index:1;
 }
 
 /* The toggles and the action buttons share one row. A 1fr/auto/1fr grid keeps
