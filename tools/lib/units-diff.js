@@ -7,7 +7,6 @@
  * access so it can be unit tested (test/units-diff.test.js):
  *
  *   decodeCard()      one dokkandb catalogue record -> the facts the site needs
- *   mergeRecent()     folds the "latest cards" list into the saved catalogue
  *   sideOf()          which side of the checklist a card belongs on, if any
  *   buildProposal()   catalogue + current units files -> a proposal to review
  *   checkProposal()   is an (owner-edited) proposal safe to apply?
@@ -196,31 +195,6 @@ function buildProposal({ units, globalCards, jpCards, ignoreIds }) {
   return proposal;
 }
 
-// Folds dokkandb's short "latest cards" list into the saved catalogue, so a
-// routine check does not need the whole catalogue again.
-//   cards   the saved Global catalogue
-//   recent  the latest-cards list: records with at least id and
-//           optimal_awakening_step
-// Returns { cards, updated } with the EZA steps of the listed cards brought
-// up to date, or null when the list names a card the saved catalogue has
-// never seen (or is not a usable list): then the full catalogue is needed.
-function mergeRecent(cards, recent) {
-  if (!Array.isArray(recent) || !recent.length) return null;
-  const position = new Map(cards.map((card, index) => [Number(card.id), index]));
-  const next = cards.slice();
-  let updated = 0;
-  for (const item of recent) {
-    const index = position.get(Number(item && item.id));
-    if (index === undefined) return null;
-    if (item.optimal_awakening_step === undefined) continue;
-    if (Number(next[index].optimal_awakening_step) !== Number(item.optimal_awakening_step)) {
-      next[index] = Object.assign({}, next[index], { optimal_awakening_step: item.optimal_awakening_step });
-      updated++;
-    }
-  }
-  return { cards: next, updated };
-}
-
 // True when a proposal contains nothing to apply.
 function isEmpty(proposal) {
   return ['lr', 'dfe'].every(side => !proposal[side].newUnits.length && !proposal[side].ezaChanges.length);
@@ -323,6 +297,6 @@ function replaceChangelog(text, lines) {
 
 module.exports = {
   TYPES, DEFAULT_OFFSET, EZA_WORDS,
-  cleanName, toTime, decodeCard, sideOf, changelogLine, mergeRecent,
+  cleanName, toTime, decodeCard, sideOf, changelogLine,
   buildProposal, isEmpty, checkProposal, applyToUnits, formatUnits, replaceChangelog
 };

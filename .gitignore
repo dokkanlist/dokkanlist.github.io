@@ -1,5 +1,22 @@
+# Files that live on the owner's PC only. None of them is needed for the page
+# to work, so none of them belongs in the repo.
+
+# Double-click launcher for tools/update-units.js
+/Update checklist.bat
+
 # Working files of tools/update-units.js: the saved catalogue and thumbs, and
-# the proposal and preview waiting for review. None of it belongs in the repo.
+# the proposal and preview waiting for review
 tools/.cache/
 tools/proposal.json
 tools/preview.html
+
+# Notes and local helper files kept outside the site
+/HANDOFF.md
+.claude/
+
+# Things tools and Windows create on their own
+node_modules/
+npm-debug.log*
+Thumbs.db
+desktop.ini
+.DS_Store

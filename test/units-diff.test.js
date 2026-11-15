@@ -130,17 +130,6 @@ test('buildProposal stays silent about ignored ids', () => {
   assert.deepEqual(proposal.lr.newUnits.map(u => u.id), [1000031]);
 });
 
-test('mergeRecent updates EZA steps from the latest cards, or asks for the full catalogue', () => {
-  const saved = globalCards();
-  const merged = diff.mergeRecent(saved, [{ id: 1000021, optimal_awakening_step: 4 }, { id: 2000021, optimal_awakening_step: 0 }]);
-  assert.equal(merged.updated, 1);
-  assert.equal(merged.cards.find(c => c.id === 1000021).optimal_awakening_step, 4);
-  assert.equal(saved.find(c => c.id === 1000021).optimal_awakening_step, 3, 'the saved list itself is not modified');
-  assert.equal(diff.mergeRecent(saved, [{ id: 1000021, optimal_awakening_step: 3 }, { id: 9999991, optimal_awakening_step: 0 }]), null);
-  assert.equal(diff.mergeRecent(saved, []), null);
-  assert.equal(diff.mergeRecent(saved, { error: 'not a list' }), null);
-});
-
 test('buildProposal is empty when the checklist already matches', () => {
   const cards = [
     card(1000011, 5, 10, 0, 3, 'a', '2020'), card(1000021, 5, 21, 0, 0, 'b', '2020'),

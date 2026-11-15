@@ -79,16 +79,16 @@ What the script decides, and how:
   play units are only mentioned in the proposal's notes.
 
 It keeps its requests small. One request asks dokkandb whether its data has
-changed. If it has, one more reads dokkandb's short list of latest cards, and
-the saved catalogue in `tools/.cache/` is reused when it already knows every
-card on that list. The whole catalogue is downloaded only when a card it has
-never seen is listed, or once the saved copy is over 30 days old. One thumb
-per new unit comes from dokkaninfo.com. Requests go one at a time with a pause
-between them.
+changed since the last check; if not, that is all. If it has, the Global card
+catalogue is downloaded (two requests, the same ones dokkandb's own homepage
+makes to draw its timeline), so a batch of any size is seen in full. The JP
+catalogue (two more) is only fetched when a new unit needs its release order.
+One thumb per new unit comes from dokkaninfo.com. Requests go one at a time
+with a pause between them, and the last downloads are kept in `tools/.cache/`.
 
 Cards the script should never mention go in `tools/ignore-ids.json`. If a site refuses, the script stops and says so; it does not
 try to get around it. `--offline` works from the saved copy and `--refresh`
-checks against the whole catalogue again.
+downloads the catalogue even if dokkandb reports no change.
 
 ### A unit line
 

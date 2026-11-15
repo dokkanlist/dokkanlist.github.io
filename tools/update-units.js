@@ -9,7 +9,7 @@
  *
  *   node tools/update-units.js            check, write a proposal to review
  *   node tools/update-units.js --apply    apply the proposal you reviewed
- *   node tools/update-units.js --refresh  check against the whole catalogue again
+ *   node tools/update-units.js --refresh  download the catalogue even if unchanged
  *   node tools/update-units.js --offline  check using only the saved copy
  *
  * A check writes two files, both ignored by git:
@@ -22,10 +22,11 @@
  *
  * What it reads from the internet (run from the repo root):
  *   dokkandb's JSON API     1 small request to see whether their data has
- *                           changed; if so, 1 more for the latest cards. The
- *                           whole catalogue (about 4 requests) is fetched only
- *                           when a card it has never seen is listed, or once
- *                           the saved copy is over 30 days old
+ *                           changed since the last check. Only if it has:
+ *                           the Global card catalogue (2 requests, the same
+ *                           ones their homepage makes), and the JP catalogue
+ *                           (2 more) only when a new unit needs its release
+ *                           order
  *   dokkaninfo.com          one thumb image per NEW unit
  * Requests go one at a time with a pause between them. The script does not
  * try to get around a refusal; if a site says no, it stops and tells you.
@@ -66,8 +67,10 @@ const PROPOSAL_FILE = path.join(TOOLS, 'proposal.json');
 const PREVIEW_FILE = path.join(TOOLS, 'preview.html');
 // Game ids the check should stay silent about (kept by hand, tracked in git).
 const IGNORE_FILE = path.join(TOOLS, 'ignore-ids.json');
-// The saved catalogue is trusted for this long before a full download.
-const FULL_CHECK_DAYS = 30;
+// The saved copy: dokkandb's version stamps at the last check, and the two
+// catalogues as last downloaded.
+const VERSION_FILE = path.join(CACHE, 'versions.json');
+const CATALOGUE = { global: path.join(CACHE, 'catalogue-global.json'), jp: path.join(CACHE, 'catalogue-jp.json') };
 
 /* --- Small helpers ---------------------------------------- */
 
@@ -156,52 +159,46 @@ async function fetchCatalogue(server) {
   return cards;
 }
 
-// Returns { global, jp } catalogues, from the saved copy when dokkandb's data
-// version has not changed since it was saved.
-async function loadCatalogues({ refresh, offline }) {
-  const versionFile = path.join(CACHE, 'versions.json');
-  const files = { global: path.join(CACHE, 'catalogue-global.json'), jp: path.join(CACHE, 'catalogue-jp.json') };
-  const haveCopy = fs.existsSync(versionFile) && fs.existsSync(files.global) && fs.existsSync(files.jp);
+// Returns the Global catalogue: the saved copy when dokkandb's data version
+// has not changed since it was saved, otherwise a fresh download. This is the
+// same catalogue the dokkandb homepage loads to draw its timeline, so it
+// covers every new card and every EZA however large the batch.
+async function loadGlobalCatalogue({ refresh, offline }) {
+  const haveCopy = fs.existsSync(VERSION_FILE) && fs.existsSync(CATALOGUE.global);
 
   if (offline) {
     if (!haveCopy) fail('--offline needs a saved copy, and there is none yet. Run once without it.');
     console.log('Using the saved catalogue (offline).');
-    return { global: readJson(files.global), jp: readJson(files.jp) };
+    return readJson(CATALOGUE.global);
   }
 
   console.log('Asking dokkandb whether its data has changed...');
   const versions = await getJson(`${API.global}/cache-versions`);
-  const saved = readJson(versionFile, {});
+  const saved = readJson(VERSION_FILE, {});
   if (haveCopy && !refresh && saved.database === versions.database) {
-    console.log(`  No change since the saved copy (data version ${versions.database}).`);
-    return { global: readJson(files.global), jp: readJson(files.jp) };
+    console.log(`  No change since the last check (data version ${versions.database}).`);
+    return readJson(CATALOGUE.global);
   }
 
-  console.log(`  Data version ${versions.database} (saved copy is ${saved.database || 'missing'}).`);
+  console.log(`  Data version ${versions.database} (last checked: ${saved.database || 'never'}). Downloading the Global catalogue...`);
+  const cards = await fetchCatalogue('global');
+  writeText(CATALOGUE.global, JSON.stringify(cards));
+  writeText(VERSION_FILE, JSON.stringify(versions, null, 2));
+  return cards;
+}
 
-  // The data changed. Usually that is a handful of new cards and EZAs, all of
-  // which dokkandb lists as its latest cards, so look at that short list
-  // first and keep the saved catalogue if it already knows every card on it.
-  const ageDays = saved.fullAt ? (Date.now() - Date.parse(saved.fullAt)) / 86400000 : Infinity;
-  if (haveCopy && !refresh && ageDays < FULL_CHECK_DAYS) {
-    await pause(DELAY_MS);
-    const recent = await getJson(`${API.global}/recent-cards`);
-    const merged = diff.mergeRecent(readJson(files.global), recent);
-    if (merged) {
-      console.log(`  Checked the ${recent.length} latest cards only: all already known, ${merged.updated} EZA update(s).`);
-      writeText(files.global, JSON.stringify(merged.cards));
-      writeText(versionFile, JSON.stringify(Object.assign({}, versions, { fullAt: saved.fullAt }), null, 2));
-      return { global: merged.cards, jp: readJson(files.jp) };
-    }
-    console.log('  The latest cards include one not seen before.');
-  }
+// Returns the JP catalogue, which is only used for the release order of new
+// units. The saved copy is reused when it already lists every id in
+// `neededIds`; otherwise it is downloaded (never when offline).
+async function loadJpCatalogue(neededIds, offline) {
+  const saved = readJson(CATALOGUE.jp, []);
+  const have = new Set(saved.map(card => Number(card.id)));
+  if (offline || neededIds.every(id => have.has(id))) return saved;
 
-  console.log('  Downloading the whole catalogue...');
-  const catalogues = { global: await fetchCatalogue('global'), jp: await fetchCatalogue('jp') };
-  writeText(files.global, JSON.stringify(catalogues.global));
-  writeText(files.jp, JSON.stringify(catalogues.jp));
-  writeText(versionFile, JSON.stringify(Object.assign({}, versions, { fullAt: new Date().toISOString() }), null, 2));
-  return catalogues;
+  console.log('  New unit found. Downloading the JP catalogue for its release order...');
+  const cards = await fetchCatalogue('jp');
+  writeText(CATALOGUE.jp, JSON.stringify(cards));
+  return cards;
 }
 
 // Reads the width and height out of a PNG file's header, or null if the
@@ -354,9 +351,14 @@ function report(proposal) {
 // The default action: compare, save the proposal and the preview, report.
 async function check(options) {
   const units = readUnits();
-  const catalogues = await loadCatalogues(options);
+  const globalCards = await loadGlobalCatalogue(options);
   const ignoreIds = readJson(IGNORE_FILE, { ids: [] }).ids || [];
-  const proposal = diff.buildProposal({ units, globalCards: catalogues.global, jpCards: catalogues.jp, ignoreIds });
+  // First pass finds what is new; the JP catalogue is then only fetched if a
+  // new unit needs its JP release date, and the proposal is built with it.
+  const firstPass = diff.buildProposal({ units, globalCards, jpCards: [], ignoreIds });
+  const newIds = SIDES.flatMap(side => firstPass[side].newUnits.map(unit => unit.id));
+  const jpCards = newIds.length ? await loadJpCatalogue(newIds, options.offline) : [];
+  const proposal = diff.buildProposal({ units, globalCards, jpCards, ignoreIds });
   proposal.generated = new Date().toISOString();
 
   if (diff.isEmpty(proposal)) {
@@ -470,7 +472,7 @@ if (args.has('--help') || unknown.length) {
   if (unknown.length) console.error(`Unknown option: ${unknown.join(', ')}\n`);
   console.log('node tools/update-units.js            check dokkandb and write a proposal to review\n' +
     'node tools/update-units.js --apply    apply tools/proposal.json to the site\'s files\n' +
-    'node tools/update-units.js --refresh  check against the whole catalogue again\n' +
+    'node tools/update-units.js --refresh  download the catalogue even if unchanged\n' +
     'node tools/update-units.js --offline  check using only the saved catalogue\n' +
     '                           --force    with --apply: allow uncommitted edits in data/');
   process.exit(unknown.length ? 1 : 0);
