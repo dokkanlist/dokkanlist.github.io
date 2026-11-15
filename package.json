@@ -4,6 +4,8 @@
   "private": true,
   "description": "Dokkan Battle checklist site (static, served by GitHub Pages). No runtime dependencies.",
   "scripts": {
+    "update": "node tools/update-units.js",
+    "update:apply": "node tools/update-units.js --apply",
     "validate": "node validate-data.js",
     "stamp": "node validate-data.js --stamp",
     "check": "node validate-data.js --check-stamp",

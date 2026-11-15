@@ -36,6 +36,55 @@ character's raw 250 px game thumb, a rarity badge and a class + type badge. The
 frames and badges are shared (`images/layers/`), so a new character only needs
 its thumb.
 
+### Updating when new units or EZAs are released
+
+`tools/update-units.js` does the routine part. It compares the checklist with
+dokkandb's card catalogue (Global server) and proposes the changes; nothing is
+written to the site's files until you have looked at the proposal.
+
+1. Check:
+
+   ```
+   npm run update
+   ```
+
+   This prints what it found and writes two files, both ignored by git:
+   `tools/proposal.json` (the changes) and `tools/preview.html` (the new tiles,
+   drawn with the site's own styles - open it in a browser).
+2. Review. Edit `tools/proposal.json` if anything is wrong: fix a type, change
+   a thumb offset, reword a changelog line, or delete an entry you do not
+   want. New unit numbers must carry on from the last unit with no gaps.
+3. Apply:
+
+   ```
+   npm run update:apply
+   ```
+
+   This copies the new thumbs into `images/<side>/thumbs/`, adds the unit
+   lines, updates EZA states, replaces the changelog with the proposal's lines
+   and runs the validator. If the validator objects, every file is put back.
+4. Add any new free to play unit to `f2p` in `data/lr.json` (the script only
+   hints at these), look at the page, then commit. Nothing is committed for you.
+
+What the script decides, and how:
+
+- **New units:** every LR, and every UR tagged Dokkan Festival, whose game id
+  is not on the checklist yet. They are numbered on from your last unit in JP
+  release order, as your existing numbers are.
+- **Type and class:** from the card's `element`.
+- **EZA and Super EZA:** from the card's `optimal_awakening_step`.
+- **Changelog:** one line per new unit (`AGL Name`) and per EZA
+  (`AGL Name EZA`, `AGL Name Super EZA`).
+- **Left to you:** the `f2p` and `altArt` lists. Possible alt art and free to
+  play units are only mentioned in the proposal's notes.
+
+It reads dokkandb's JSON API (one small request, then the catalogue only when
+their data has changed) and one thumb per new unit from dokkaninfo.com, one
+request at a time with a pause between them, and keeps a copy in
+`tools/.cache/`. If a site refuses, the script stops and says so; it does not
+try to get around it. `--offline` works from the saved copy and `--refresh`
+ignores it.
+
 ### A unit line
 
 ```
@@ -54,6 +103,8 @@ its thumb.
   the alt art thumb.
 
 ### Adding a character by hand
+
+The update script above normally does this. The manual steps are:
 
 1. Save the raw game thumb (250 x 250 px PNG, the file the game calls
    `card_<id>_thumb.png`) as `images/lr/thumbs/<n>.png` or
@@ -88,10 +139,12 @@ The same commands are available as npm scripts (nothing to install, there are
 no dependencies):
 
 ```
+npm run update        # node tools/update-units.js (check, write a proposal)
+npm run update:apply  # node tools/update-units.js --apply
 npm run validate   # node validate-data.js
 npm run stamp      # node validate-data.js --stamp
 npm run check      # node validate-data.js --check-stamp (fails on a stale build id, writes nothing)
-npm test           # unit tests for the range parser and the validator
+npm test           # unit tests for the range parser, the validator and the update script
 npm run hooks      # switch on the pre-commit hook (once per clone)
 ```
 

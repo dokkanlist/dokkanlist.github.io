@@ -1,0 +1,5 @@
+# Working files of tools/update-units.js: the saved catalogue and thumbs, and
+# the proposal and preview waiting for review. None of it belongs in the repo.
+tools/.cache/
+tools/proposal.json
+tools/preview.html
