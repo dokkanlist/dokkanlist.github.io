@@ -290,10 +290,16 @@ input:checked + .slider:before {
 transform:translateX(11px);
 }
 
-/* The alt art switch is the same control as the "remove icons" switch, but
-   turns green when on: red is kept for the switch that takes icons away. */
-#show-alt-art:checked + .slider {
-background-color:#1f6b00;
+/* The art picker: a label followed by a pick-one pair of buttons that borrow
+   the filter bar look (see "Filter bars"). Taller than a switch, so it does
+   not take the fixed switch height, and its label sits before the buttons. */
+.art-picker {
+height:auto;
+}
+
+.toggle-row .art-picker .tooltip {
+margin:0 8px 0 0;
+cursor:default;
 }
 
 /* The toggles and the action buttons share one row. A 1fr/auto/1fr grid keeps
@@ -897,7 +903,8 @@ font-weight: 700;
    colour and ties on specificity with `.filter-bar button`, so the text colour
    is pinned here where the id guarantees it wins. */
 #type-filter button,
-#eza-filter button { color: #9fb6d8; }
+#eza-filter button,
+#art-picker button { color: #9fb6d8; }
 
 /* Cyan rather than the neutral grey-blue, so the F2P toggle reads as a
    separate filter from the EZA group it shares a line with. Not one of the

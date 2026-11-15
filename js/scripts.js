@@ -282,7 +282,7 @@ async function loadUnits(mode) {
 
 // Page elements used throughout the script.
 let grid, counter, changelogList, iconContainer, header, toggleButton;
-let hideToggle, altArtToggle;
+let hideToggle, artPicker;
 
 /* --- Rendering ------------------------------------------- */
 
@@ -346,7 +346,7 @@ function buildLayers(flair, id, type) {
   setThumbArt(flair, id);
 }
 
-// Sets (or swaps, for the alt art toggle) the art shown on a tile: points the
+// Sets (or swaps, for the art picker) the art shown on a tile: points the
 // thumb at the normal or alt art file and applies that art's own offset. The
 // offset is stored in pixels of the original icon canvas and handed to CSS as
 // --tx / --ty, which converts it to a percentage.
@@ -609,7 +609,7 @@ async function setMode(mode) {
     ? 'Switch to the LR checklist'
     : 'Switch to the DFE checklist');
 
-  altArtToggle.checked = store.altArt;
+  syncArtPicker();
   syncFilterBarVisibility(data);
   renderChangelog(data);
   renderGrid();
@@ -1045,12 +1045,28 @@ async function showLastUpdate() {
 
 /* --- Alt art --------------------------------------------- */
 
-// The "toggle alt art" box: saves the choice and swaps the thumb on every
-// unit that has alt art.
-function initAltArtToggle() {
-  altArtToggle.addEventListener('change', () => {
-    store.altArt = altArtToggle.checked;
+// Lights the art picker button that matches the saved choice.
+function syncArtPicker() {
+  const current = store.altArt ? 'alt' : 'standard';
+  for (const button of artPicker.querySelectorAll('button[data-value]')) {
+    const active = button.dataset.value === current;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
+}
+
+// The art picker ("Standard" / "Alt"): saves the choice and swaps the thumb
+// on every unit that has alt art. Clicking the lit button changes nothing.
+function initArtPicker() {
+  artPicker.addEventListener('click', event => {
+    const button = event.target.closest('button[data-value]');
+    if (!button) return;
+    const wantAlt = button.dataset.value === 'alt';
+    if (wantAlt === store.altArt) return;
+
+    store.altArt = wantAlt;
     saveStore();
+    syncArtPicker();
 
     const data = modeData[store.mode];
     for (const flair of grid.children) {
@@ -1072,7 +1088,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   header = document.getElementById('header');
   toggleButton = document.getElementById('toggleButton');
   hideToggle = document.getElementById('hide-lr');
-  altArtToggle = document.getElementById('show-alt-art');
+  artPicker = document.getElementById('art-picker');
   buildId = document.body.dataset.build || '';
 
   loadStore();
@@ -1082,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initModals();
   initGrid();
   initRemovedModal();
-  initAltArtToggle();
+  initArtPicker();
   initModeToggle();
 
   document.getElementById('select-all').addEventListener('click', selectVisible);
