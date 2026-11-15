@@ -124,7 +124,7 @@ overflow-y: hidden;
 overscroll-behavior: contain
 }
 
-#removed-modal, #import-modal, #export-modal {
+#removed-modal, #import-modal, #export-modal, #stats-modal {
 padding-top:150px;
 }
 
@@ -324,25 +324,28 @@ color:#b4c6ea;
 line-height:1;
 }
 
-/* The two words. The site-wide button look (border, fill, padding, hover
-   colour) is cleared so only the text and its underline remain. */
+/* The two words. The site-wide button look (green border, padding, hover
+   colour) is replaced by a soft navy fill with rounded top corners, so each
+   word reads as a small tab sitting on its underline. */
 .art-picker button {
 margin:0;
-padding:1px 6px 3px;
+padding:2px 8px 3px;
 border:0;
 border-bottom:2px solid transparent;
-border-radius:0;
-background:none;
+border-radius:3px 3px 0 0;
+background:#0b1630;
 box-shadow:none;
 font-size:12px;
 font-weight:700;
 color:#6f82a6;
 cursor:pointer;
-transition:color .2s, border-color .2s;
+transition:color .2s, border-color .2s, background-color .2s;
 }
 
+/* The chosen word: brighter text, a lighter fill and the cyan underline. */
 .art-picker button.active {
 color:#e6eeff;
+background:#17305c;
 border-bottom-color:#6ee8fd;
 }
 
@@ -350,12 +353,16 @@ border-bottom-color:#6ee8fd;
    shrink, on both words, chosen or not. */
 .art-picker button:hover,
 .art-picker button:active {
-background:none;
 transform:none;
+}
+
+.art-picker button.active:hover {
+background:#17305c;
 }
 
 .art-picker button:not(.active):hover {
 color:#b8c8e6;
+background:#122244;
 }
 
 /* Keyboard focus gets a visible ring, since the plain words have no border. */
@@ -396,7 +403,7 @@ max-width:100%;
 }
 
 /* Wide screens only: sits just above the toggle. The stacked layout puts it
-   back in the flow (see the max-width 920px block). */
+   back in the flow (see the max-width 990px block). */
 .toggle-row .art-picker {
 position:absolute;
 left:0;
@@ -1029,6 +1036,133 @@ font-weight: 700;
 }
 
 
+/* ═══ Stats window ═══ */
+/* Narrower than the other windows: it is a short list of bars. */
+#stats-modal .modal-container {
+max-width:40rem;
+}
+
+.stats-content {
+background:#030a1c;
+padding:16px 18px;
+text-align:left;
+border-bottom-left-radius:.5rem;
+border-bottom-right-radius:.5rem;
+}
+
+/* The headline line and its large bar. */
+.stats-total {
+margin-bottom:18px;
+}
+
+.stats-total-line {
+display:flex;
+justify-content:space-between;
+align-items:baseline;
+font-size:13px;
+color:#cfdaf0;
+margin-bottom:5px;
+}
+
+.stats-total-line b {
+font-size:20px;
+color:#fff;
+}
+
+.stats-total .stat-bar {
+height:14px;
+}
+
+/* Sections in two columns, one column on phones. */
+.stats-grid {
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:16px 28px;
+}
+
+.stats-grid h4 {
+margin:0 0 8px;
+font-size:10px;
+font-weight:700;
+letter-spacing:.14em;
+text-transform:uppercase;
+color:#b4c6ea;
+}
+
+/* One line per group: name, bar, numbers. */
+.stat-row {
+display:grid;
+grid-template-columns:74px 1fr 72px;
+align-items:center;
+gap:8px;
+margin-bottom:7px;
+font-size:12px;
+}
+
+.stat-name {
+font-weight:700;
+color:var(--fill);
+white-space:nowrap;
+}
+
+.stat-num {
+text-align:right;
+color:#9fb6d8;
+font-variant-numeric:tabular-nums;
+white-space:nowrap;
+}
+
+.stat-num small {
+color:#6f82a6;
+}
+
+/* A recessed track with a glowing fill set to the group's percentage. */
+.stat-bar {
+position:relative;
+height:8px;
+border-radius:999px;
+background:#0b1630;
+box-shadow:inset 0 1px 2px #000;
+overflow:hidden;
+}
+
+.stat-bar > span {
+position:absolute;
+top:0;
+bottom:0;
+left:0;
+border-radius:inherit;
+background:var(--fill);
+box-shadow:0 0 6px var(--fill);
+}
+
+.stats-note {
+margin:12px 0 0;
+font-size:11px;
+color:#6f82a6;
+}
+
+/* Colour per group, read by both the name and the bar through --fill. */
+[data-key="all"] { --fill:#7dff51; }
+[data-key="agl"] { --fill:var(--agl-text); }
+[data-key="teq"] { --fill:var(--teq-text); }
+[data-key="str"] { --fill:var(--str-text); }
+[data-key="phy"] { --fill:var(--phy-text); }
+[data-key="int"] { --fill:var(--int-text); }
+[data-key="super"] { --fill:#9fc0ff; }
+[data-key="extreme"] { --fill:#ff8f8f; }
+[data-key="eza"] { --fill:#ffd36a; }
+[data-key="eza2"] { --fill:#ff9be0; }
+[data-key="noeza"] { --fill:#9fb6d8; }
+[data-key="f2p"] { --fill:#6ee8fd; }
+
+@media only screen and (max-width: 560px) {
+  .stats-grid {
+    grid-template-columns:1fr;
+  }
+}
+
+
 /* ═══ Messages ═══ */
 .modal-empty,
 .load-error {
@@ -1060,10 +1194,10 @@ font-weight: 700;
 /* The desktop layout hangs the changelog, switches, footer and mode toggle off
    absolute positions with fixed pixel offsets. Below 760px there is no room for
    that, so everything returns to normal flow and stacks. */
-/* The controls row stacks below 920px: from there down, the remove icons
-   toggle (about 180px) no longer fits beside the centred buttons (515px) and
-   its label ran underneath Select All. */
-@media only screen and (max-width: 920px) {
+/* The controls row stacks below 990px: from there down, the remove icons
+   toggle (about 180px) no longer fits beside the centred buttons (570px with
+   Stats) and its label would run underneath Select All. */
+@media only screen and (max-width: 990px) {
   /* Stacked, but keep the desktop reading order: buttons, then the toggles
      sitting just above the grid they act on. */
   .controls-row {

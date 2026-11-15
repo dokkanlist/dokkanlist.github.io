@@ -22,8 +22,8 @@
   <link rel="icon" id="favicon" type="image/x-icon" href="stone.ico">
 
   <!--stylesheets-->
-  <link rel="stylesheet" href="css/style.css?v=bf6e9612" type="text/css" media="all">
-  <link rel="stylesheet" href="css/flairs.css?v=bf6e9612" type="text/css" media="all">
+  <link rel="stylesheet" href="css/style.css?v=6dd9a54a" type="text/css" media="all">
+  <link rel="stylesheet" href="css/flairs.css?v=6dd9a54a" type="text/css" media="all">
 
   <!--scripts (pinned + SRI so a CDN release cannot silently break the page)-->
   <script defer
@@ -34,13 +34,13 @@
           src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"
           integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy"
           crossorigin="anonymous"></script>
-  <script defer src="js/lz-string.js?v=bf6e9612"></script>
-  <script defer src="js/ranges.js?v=bf6e9612"></script>
-  <script defer src="js/scripts.js?v=bf6e9612"></script>
+  <script defer src="js/lz-string.js?v=6dd9a54a"></script>
+  <script defer src="js/ranges.js?v=6dd9a54a"></script>
+  <script defer src="js/scripts.js?v=6dd9a54a"></script>
 
 </head>
 
-<body data-build="bf6e9612">
+<body data-build="6dd9a54a">
   <noscript>JavaScript is required to run this page.</noscript>
 
   <!--Notice banner: hidden unless something needs the visitor's attention
@@ -129,6 +129,7 @@
         <button id="select-none">Reset</button>
         <button id="list-hidden">List Removed Icons</button>
         <button id="generate">Generate Image</button>
+        <button id="show-stats">Stats</button>
         <button id="import">Import</button>
         <button id="export">Export</button>
       </div>
@@ -145,6 +146,18 @@
         <button type="button" class="close-btn" aria-label="Close">&times;</button>
       </div>
       <div class="modal-content"></div>
+    </div>
+  </div>
+
+  <!--Stats Window: owned out of total for the side on screen, by type, class,
+      EZA state and (LR) F2P. Filled by showStats() each time it opens.-->
+  <div class="modal" id="stats-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="stats-modal-title">
+    <div class="modal-container">
+      <div class="modal-header">
+        <span class="modal-text" id="stats-modal-title">Stats</span>
+        <button type="button" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="stats-content" id="stats-content"></div>
     </div>
   </div>
 

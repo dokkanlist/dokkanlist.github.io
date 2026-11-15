@@ -773,6 +773,137 @@ function initRemovedModal() {
   });
 }
 
+/* --- Stats ----------------------------------------------- */
+
+// The groups in the Stats window, in order. Each test picks the units that
+// belong to the group; colours come from css/style.css by data-key.
+const STAT_SECTIONS = [
+  {
+    title: 'By type',
+    rows: TYPES.map(type => ({ key: type, label: type.toUpperCase(), test: unit => unit.type === type }))
+  },
+  {
+    title: 'By class',
+    rows: [
+      { key: 'super', label: 'Super', test: unit => unit.class === 'super' },
+      { key: 'extreme', label: 'Extreme', test: unit => unit.class === 'extreme' }
+    ]
+  },
+  {
+    title: 'EZA',
+    rows: [
+      { key: 'eza', label: 'EZA', test: unit => unit.eza === 1 || unit.eza === 2 },
+      { key: 'eza2', label: 'Super EZA', test: unit => unit.eza === 2 },
+      { key: 'noeza', label: 'No EZA', test: unit => !unit.eza }
+    ]
+  },
+  {
+    title: 'Free to play',
+    onlyIf: data => data.hasF2p,
+    rows: [{ key: 'f2p', label: 'F2P', test: (unit, id, data) => data.f2p.has(id) }]
+  }
+];
+
+// Fills and opens the Stats window for the side on screen: owned out of total
+// overall and per group. Removed icons are left out of every total, the same
+// as the counter at the top of the page. Filters are ignored on purpose, so
+// the numbers describe the whole collection.
+function showStats() {
+  const data = modeData[store.mode];
+  if (!data) return;
+  const selected = store.selected[store.mode];
+  const hidden = store.hidden[store.mode];
+
+  // Owned / total for every unit that passes `test`.
+  const count = test => {
+    let have = 0;
+    let total = 0;
+    for (const [key, unit] of Object.entries(data.units)) {
+      const id = Number(key);
+      if (hidden.has(id) || !test(unit, id, data)) continue;
+      total++;
+      if (selected.has(id)) have++;
+    }
+    return { have, total };
+  };
+
+  const box = document.getElementById('stats-content');
+  box.textContent = '';
+
+  // The headline: one large bar for the whole side.
+  const all = count(() => true);
+  const head = document.createElement('div');
+  head.className = 'stats-total';
+  const line = document.createElement('div');
+  line.className = 'stats-total-line';
+  const name = document.createElement('span');
+  name.textContent = 'All ' + data.label;
+  const nums = document.createElement('span');
+  const big = document.createElement('b');
+  big.textContent = String(all.have);
+  nums.append(big, ` / ${all.total}  ${percent(all)}%`);
+  line.append(name, nums);
+  head.append(line, statBar(all, 'all'));
+  box.appendChild(head);
+
+  // The groups, in a grid of sections.
+  const grid = document.createElement('div');
+  grid.className = 'stats-grid';
+  for (const section of STAT_SECTIONS) {
+    if (section.onlyIf && !section.onlyIf(data)) continue;
+    const block = document.createElement('div');
+    const title = document.createElement('h4');
+    title.textContent = section.title;
+    block.appendChild(title);
+    for (const row of section.rows) block.appendChild(statRow(row, count(row.test)));
+    grid.appendChild(block);
+  }
+  box.appendChild(grid);
+
+  if (hidden.size) {
+    const note = document.createElement('p');
+    note.className = 'stats-note';
+    note.textContent = `${hidden.size} removed icon(s) are left out of these numbers.`;
+    box.appendChild(note);
+  }
+
+  openModal('stats-modal');
+}
+
+// Whole-number percentage of owned out of total (0 when the group is empty).
+function percent(group) {
+  return group.total ? Math.round(group.have / group.total * 100) : 0;
+}
+
+// A progress bar filled to the group's percentage, coloured by its key.
+function statBar(group, key) {
+  const bar = document.createElement('div');
+  bar.className = 'stat-bar';
+  bar.dataset.key = key;
+  bar.setAttribute('role', 'presentation');
+  const fill = document.createElement('span');
+  fill.style.width = percent(group) + '%';
+  bar.appendChild(fill);
+  return bar;
+}
+
+// One labelled line in the Stats window: name, bar, "have/total pct%".
+function statRow(row, group) {
+  const line = document.createElement('div');
+  line.className = 'stat-row';
+  line.dataset.key = row.key;
+  const name = document.createElement('span');
+  name.className = 'stat-name';
+  name.textContent = row.label;
+  const nums = document.createElement('span');
+  nums.className = 'stat-num';
+  const pct = document.createElement('small');
+  pct.textContent = percent(group) + '%';
+  nums.append(`${group.have}/${group.total} `, pct);
+  line.append(name, statBar(group, row.key), nums);
+  return line;
+}
+
 /* --- Modals ---------------------------------------------- */
 
 // The window that is open (or null), and the control that had keyboard focus
@@ -1124,6 +1255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   document.getElementById('list-hidden').addEventListener('click', showRemoved);
+  document.getElementById('show-stats').addEventListener('click', showStats);
   document.getElementById('generate').addEventListener('click', generateImage);
   document.getElementById('image-download').addEventListener('click', downloadImage);
   document.getElementById('import').addEventListener('click', () => openModal('import-modal'));
