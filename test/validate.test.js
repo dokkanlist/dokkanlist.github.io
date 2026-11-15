@@ -40,7 +40,6 @@ function sideData(mode) {
     title: 'Test checklist',
     favicon: 'icon.ico',
     iconDir: `images/${mode}`,
-    idSuffix: '',
     f2p: '1',
     altArt: [2],
     changelog: ['First line']

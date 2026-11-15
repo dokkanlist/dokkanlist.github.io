@@ -250,7 +250,6 @@ function normaliseData(raw, units) {
     title: raw.title,
     favicon: raw.favicon,
     iconDir: raw.iconDir,
-    idSuffix: raw.idSuffix || '',
     total: Object.keys(units).length,
     changelog: Array.isArray(raw.changelog) ? raw.changelog : [],
     units,
@@ -381,7 +380,6 @@ function renderGrid() {
   for (let id = 1; id <= data.total; id++) {
     const flair = document.createElement('div');
     flair.className = 'flair';
-    flair.id = id + data.idSuffix;
     flair.dataset.id = String(id);
     flair.setAttribute('role', 'checkbox');
     flair.setAttribute('aria-checked', 'false');

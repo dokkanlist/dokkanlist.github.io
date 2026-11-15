@@ -30,7 +30,7 @@ const DATA_FILES = ['data/lr.json', 'data/dfe.json'];
 // Every key a data file may have. Anything else is treated as a typing slip.
 // These are the texts and the lists kept by hand; everything per unit lives
 // in the units file.
-const DATA_KEYS = ['mode', 'label', 'title', 'favicon', 'iconDir', 'idSuffix',
+const DATA_KEYS = ['mode', 'label', 'title', 'favicon', 'iconDir',
   'f2p', 'altArt', 'changelog'];
 // Keys that used to live in the data file. Named separately so that putting
 // one back gets a clear message.
@@ -255,9 +255,6 @@ function checkMode(file) {
   }
   const stem = path.basename(file, '.json');
   if (data.mode !== stem) error(scope, `mode must be "${stem}" to match the file name`);
-  if (data.idSuffix !== undefined && typeof data.idSuffix !== 'string') {
-    error(scope, 'idSuffix must be a string');
-  }
 
   const iconDir = data.iconDir;
   if (!iconDir || !fs.existsSync(iconDir)) {

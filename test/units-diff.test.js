@@ -199,7 +199,7 @@ function write(root, file, content) {
 function makeRepo() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dokkanlist-update-'));
   const side = mode => ({
-    mode, label: 'Units', title: 'Test', favicon: 'icon.ico', iconDir: `images/${mode}`, idSuffix: '',
+    mode, label: 'Units', title: 'Test', favicon: 'icon.ico', iconDir: `images/${mode}`,
     altArt: [], changelog: ['Old line']
   });
   write(root, 'data/lr.json', JSON.stringify(side('lr'), null, 2).replace('"altArt": []', '"altArt": []') + '\n');
