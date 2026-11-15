@@ -290,7 +290,7 @@ async function loadUnits(mode) {
 /* --- Elements (assigned on DOMContentLoaded) ------------- */
 
 // Page elements used throughout the script.
-let grid, counterTotal, typeCounts, changelogList, iconContainer, header, toggleButton;
+let grid, counter, changelogList, iconContainer, header, toggleButton;
 let hideToggle, artPicker;
 
 /* --- Rendering ------------------------------------------- */
@@ -560,41 +560,65 @@ function resetFilterUi() {
 
 /* --- Counter --------------------------------------------- */
 
-// Rewrites the "Total - chosen/visible" line and the per-type breakdown,
-// counting only the tiles currently on screen.
+// The counter's groups after the total. Each tests a tile by the classes it
+// was given in renderGrid(); colours come from css/style.css by data-key.
+// The first line is the five types, the second the quieter extras.
+const COUNTER_TYPES = TYPES.map(type => ({ key: type, label: type.toUpperCase(), cls: 'type-' + type }));
+const COUNTER_EXTRAS = [
+  { key: 'super', label: 'Super', cls: 'class-super' },
+  { key: 'extreme', label: 'Extreme', cls: 'class-extreme', last: true },
+  { key: 'eza', label: 'EZA', cls: 'eza' },
+  { key: 'eza2', label: 'Super EZA', cls: 'eza2', last: true },
+  { key: 'f2p', label: 'F2P', cls: 'f2p', onlyIf: data => data.hasF2p }
+];
+
+// Rewrites the counter: "Total - chosen/visible" with a bar, then one item
+// with a bar per type, then a smaller line for class, EZA and F2P. Only the
+// tiles on screen are counted, so every number follows the filters; a group
+// with nothing on screen is left out.
 function updateCounter() {
   const data = modeData[store.mode];
   if (!data) return;
 
-  const perType = {};
-  for (const type of TYPES) perType[type] = { visible: 0, chosen: 0 };
-  let visible = 0;
-  let chosen = 0;
+  const groups = [...COUNTER_TYPES, ...COUNTER_EXTRAS];
+  const tally = {};
+  for (const group of groups) tally[group.key] = { have: 0, total: 0 };
+  const all = { have: 0, total: 0 };
 
   for (const flair of grid.children) {
     if (!isVisible(flair)) continue;
     const isOn = flair.classList.contains('selected');
-    visible++;
-    if (isOn) chosen++;
-
-    const type = data.typeOf.get(Number(flair.dataset.id));
-    if (!type) continue;
-    perType[type].visible++;
-    if (isOn) perType[type].chosen++;
+    all.total++;
+    if (isOn) all.have++;
+    for (const group of groups) {
+      if (!flair.classList.contains(group.cls)) continue;
+      tally[group.key].total++;
+      if (isOn) tally[group.key].have++;
+    }
   }
 
-  const breakdown = TYPES
-    .filter(type => perType[type].visible > 0)
-    .map(type => {
-      const label = type.toUpperCase();
-      return `<span class="${label}">${label} ${perType[type].chosen}/${perType[type].visible}</span>`;
-    })
-    .join('');
+  // One item: coloured "LABEL have/total" with a bar underneath. A thin
+  // divider follows the last item of a group of extras.
+  const item = group => {
+    const t = tally[group.key];
+    if (!t.total) return '';
+    return `<div class="c-item" data-key="${group.key}">` +
+      `<span class="c-text">${group.label} ${t.have}/${t.total}</span>${counterBar(t)}</div>` +
+      (group.last ? '<span class="c-sep" aria-hidden="true"></span>' : '');
+  };
+  const extras = COUNTER_EXTRAS.filter(group => !group.onlyIf || group.onlyIf(data)).map(item).join('');
 
-  // The Stats button shares the second line and is never rebuilt here, so
-  // only the two text parts are rewritten.
-  counterTotal.innerHTML = `<span class="cl">Total ${escapeHtml(data.label)} - </span>${chosen}/${visible}`;
-  typeCounts.innerHTML = breakdown;
+  counter.innerHTML =
+    `<div class="c-total"><span class="cl">Total ${escapeHtml(data.label)} - </span>${all.have}/${all.total}</div>` +
+    `<div class="c-total-bar" data-key="all">${counterBar(all)}</div>` +
+    `<div class="c-row">${COUNTER_TYPES.map(item).join('')}</div>` +
+    (extras ? `<div class="c-row c-extra">${extras}</div>` : '');
+}
+
+// A thin progress bar filled to have/total (empty when total is 0).
+function counterBar(t) {
+  const pct = t.total ? Math.round(t.have / t.total * 100) : 0;
+  return `<span class="c-bar"><span style="width:${pct}%"></span></span>`;
 }
 
 /* --- Mode switching -------------------------------------- */
@@ -772,137 +796,6 @@ function initRemovedModal() {
     icon.remove();
     applyStoredState();
   });
-}
-
-/* --- Stats ----------------------------------------------- */
-
-// The groups in the Stats window, in order. Each test picks the units that
-// belong to the group; colours come from css/style.css by data-key.
-const STAT_SECTIONS = [
-  {
-    title: 'By type',
-    rows: TYPES.map(type => ({ key: type, label: type.toUpperCase(), test: unit => unit.type === type }))
-  },
-  {
-    title: 'By class',
-    rows: [
-      { key: 'super', label: 'Super', test: unit => unit.class === 'super' },
-      { key: 'extreme', label: 'Extreme', test: unit => unit.class === 'extreme' }
-    ]
-  },
-  {
-    title: 'EZA',
-    rows: [
-      { key: 'eza', label: 'EZA', test: unit => unit.eza === 1 || unit.eza === 2 },
-      { key: 'eza2', label: 'Super EZA', test: unit => unit.eza === 2 },
-      { key: 'noeza', label: 'No EZA', test: unit => !unit.eza }
-    ]
-  },
-  {
-    title: 'Free to play',
-    onlyIf: data => data.hasF2p,
-    rows: [{ key: 'f2p', label: 'F2P', test: (unit, id, data) => data.f2p.has(id) }]
-  }
-];
-
-// Fills and opens the Stats window for the side on screen: owned out of total
-// overall and per group. Removed icons are left out of every total, the same
-// as the counter at the top of the page. Filters are ignored on purpose, so
-// the numbers describe the whole collection.
-function showStats() {
-  const data = modeData[store.mode];
-  if (!data) return;
-  const selected = store.selected[store.mode];
-  const hidden = store.hidden[store.mode];
-
-  // Owned / total for every unit that passes `test`.
-  const count = test => {
-    let have = 0;
-    let total = 0;
-    for (const [key, unit] of Object.entries(data.units)) {
-      const id = Number(key);
-      if (hidden.has(id) || !test(unit, id, data)) continue;
-      total++;
-      if (selected.has(id)) have++;
-    }
-    return { have, total };
-  };
-
-  const box = document.getElementById('stats-content');
-  box.textContent = '';
-
-  // The headline: one large bar for the whole side.
-  const all = count(() => true);
-  const head = document.createElement('div');
-  head.className = 'stats-total';
-  const line = document.createElement('div');
-  line.className = 'stats-total-line';
-  const name = document.createElement('span');
-  name.textContent = 'All ' + data.label;
-  const nums = document.createElement('span');
-  const big = document.createElement('b');
-  big.textContent = String(all.have);
-  nums.append(big, ` / ${all.total}  ${percent(all)}%`);
-  line.append(name, nums);
-  head.append(line, statBar(all, 'all'));
-  box.appendChild(head);
-
-  // The groups, in a grid of sections.
-  const grid = document.createElement('div');
-  grid.className = 'stats-grid';
-  for (const section of STAT_SECTIONS) {
-    if (section.onlyIf && !section.onlyIf(data)) continue;
-    const block = document.createElement('div');
-    const title = document.createElement('h4');
-    title.textContent = section.title;
-    block.appendChild(title);
-    for (const row of section.rows) block.appendChild(statRow(row, count(row.test)));
-    grid.appendChild(block);
-  }
-  box.appendChild(grid);
-
-  if (hidden.size) {
-    const note = document.createElement('p');
-    note.className = 'stats-note';
-    note.textContent = `${hidden.size} removed icon(s) are left out of these numbers.`;
-    box.appendChild(note);
-  }
-
-  openModal('stats-modal');
-}
-
-// Whole-number percentage of owned out of total (0 when the group is empty).
-function percent(group) {
-  return group.total ? Math.round(group.have / group.total * 100) : 0;
-}
-
-// A progress bar filled to the group's percentage, coloured by its key.
-function statBar(group, key) {
-  const bar = document.createElement('div');
-  bar.className = 'stat-bar';
-  bar.dataset.key = key;
-  bar.setAttribute('role', 'presentation');
-  const fill = document.createElement('span');
-  fill.style.width = percent(group) + '%';
-  bar.appendChild(fill);
-  return bar;
-}
-
-// One labelled line in the Stats window: name, bar, "have/total pct%".
-function statRow(row, group) {
-  const line = document.createElement('div');
-  line.className = 'stat-row';
-  line.dataset.key = row.key;
-  const name = document.createElement('span');
-  name.className = 'stat-name';
-  name.textContent = row.label;
-  const nums = document.createElement('span');
-  nums.className = 'stat-num';
-  const pct = document.createElement('small');
-  pct.textContent = percent(group) + '%';
-  nums.append(`${group.have}/${group.total} `, pct);
-  line.append(name, statBar(group, row.key), nums);
-  return line;
 }
 
 /* --- Modals ---------------------------------------------- */
@@ -1230,8 +1123,7 @@ function initArtPicker() {
 // control, then draw the saved side.
 document.addEventListener('DOMContentLoaded', async () => {
   grid = document.getElementById('special');
-  counterTotal = document.getElementById('counter-total');
-  typeCounts = document.getElementById('type-counts');
+  counter = document.getElementById('counter');
   changelogList = document.getElementById('changelog-item');
   iconContainer = document.getElementById('icon-container');
   header = document.getElementById('header');
@@ -1257,7 +1149,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   document.getElementById('list-hidden').addEventListener('click', showRemoved);
-  document.getElementById('show-stats').addEventListener('click', showStats);
   document.getElementById('generate').addEventListener('click', generateImage);
   document.getElementById('image-download').addEventListener('click', downloadImage);
   document.getElementById('import').addEventListener('click', () => openModal('import-modal'));

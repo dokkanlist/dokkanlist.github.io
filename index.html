@@ -22,8 +22,8 @@
   <link rel="icon" id="favicon" type="image/x-icon" href="stone.ico">
 
   <!--stylesheets-->
-  <link rel="stylesheet" href="css/style.css?v=bada931c" type="text/css" media="all">
-  <link rel="stylesheet" href="css/flairs.css?v=bada931c" type="text/css" media="all">
+  <link rel="stylesheet" href="css/style.css?v=1e3d9bdd" type="text/css" media="all">
+  <link rel="stylesheet" href="css/flairs.css?v=1e3d9bdd" type="text/css" media="all">
 
   <!--scripts (pinned + SRI so a CDN release cannot silently break the page)-->
   <script defer
@@ -34,13 +34,13 @@
           src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"
           integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy"
           crossorigin="anonymous"></script>
-  <script defer src="js/lz-string.js?v=bada931c"></script>
-  <script defer src="js/ranges.js?v=bada931c"></script>
-  <script defer src="js/scripts.js?v=bada931c"></script>
+  <script defer src="js/lz-string.js?v=1e3d9bdd"></script>
+  <script defer src="js/ranges.js?v=1e3d9bdd"></script>
+  <script defer src="js/scripts.js?v=1e3d9bdd"></script>
 
 </head>
 
-<body data-build="bada931c">
+<body data-build="1e3d9bdd">
   <noscript>JavaScript is required to run this page.</noscript>
 
   <!--Notice banner: hidden unless something needs the visitor's attention
@@ -59,15 +59,9 @@
     <ul id="changelog-item"></ul>
   </div>
 
-  <!--Counter: the total on the first line, then the Stats button and the
-      per-type numbers on the second. js/scripts.js fills the two spans.-->
-  <div id="counter">
-    <span id="counter-total"></span>
-    <div class="type-breakdown">
-      <button type="button" id="show-stats" class="stats-chip" title="Owned out of total, by type, class, EZA and F2P">Stats</button>
-      <span id="type-counts"></span>
-    </div>
-  </div>
+  <!--Counter: the total with a bar, a line per type with bars, then a smaller
+      line for class, EZA and F2P. Filled by updateCounter() in js/scripts.js.-->
+  <div id="counter" aria-live="polite"></div>
 
   <div class="buttons">
     <!--Filter bars. Each is a single-choice group; they all AND together.-->
@@ -153,18 +147,6 @@
         <button type="button" class="close-btn" aria-label="Close">&times;</button>
       </div>
       <div class="modal-content"></div>
-    </div>
-  </div>
-
-  <!--Stats Window: owned out of total for the side on screen, by type, class,
-      EZA state and (LR) F2P. Filled by showStats() each time it opens.-->
-  <div class="modal" id="stats-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="stats-modal-title">
-    <div class="modal-container">
-      <div class="modal-header">
-        <span class="modal-text" id="stats-modal-title">Stats</span>
-        <button type="button" class="close-btn" aria-label="Close">&times;</button>
-      </div>
-      <div class="stats-content" id="stats-content"></div>
     </div>
   </div>
 
