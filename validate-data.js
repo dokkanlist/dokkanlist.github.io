@@ -4,7 +4,8 @@
 /*
  * validate-data.js
  * ----------------
- * Checks data/lr.json and data/dfe.json against the icons actually on disk.
+ * Checks data/lr.json and data/dfe.json, their units files and the layer
+ * images against what is actually on disk.
  * Run it after editing a data file, before committing:
  *
  *   node validate-data.js            report problems
@@ -46,19 +47,6 @@ function parseRanges(rangeString, scope, field) {
   return Ranges.parseRanges(rangeString, {
     onError: message => error(scope, `${field}: ${message}`)
   });
-}
-
-function listIcons(dir) {
-  const plain = new Set();
-  const alt = new Set();
-
-  for (const file of fs.readdirSync(dir)) {
-    let match = /^(\d+)\.webp$/.exec(file);
-    if (match) { plain.add(Number(match[1])); continue; }
-    match = /^(\d+)_alt\.webp$/.exec(file);
-    if (match) alt.add(Number(match[1]));
-  }
-  return { plain, alt };
 }
 
 function summarise(numbers, limit = 12) {
@@ -127,8 +115,10 @@ function checkLayered(scope, file, iconDir, total, altArt) {
     for (let i = 1; i <= total; i++) if (!plain.has(i)) missing.push(i);
     if (missing.length) error(scope, `no thumb file for ${summarise(missing)}`);
 
+    // total must be the highest numbered thumb, so a new thumb cannot be
+    // added without also bumping total (and the other way round).
     const extra = [...plain].filter(i => i > total).sort((a, b) => a - b);
-    if (extra.length) warn(scope, `thumb files past total (${total}): ${summarise(extra)}`);
+    if (extra.length) error(scope, `total is ${total} but ${iconDir}/thumbs also has ${summarise(extra)}`);
 
     for (const id of altArt) {
       if (!alt.has(id)) error(scope, `altArt lists ${id} but ${iconDir}/thumbs/${id}_alt.png is missing`);
@@ -204,25 +194,7 @@ function checkMode(file) {
     return null;
   }
 
-  const { plain, alt } = listIcons(path.join(iconDir, 'icons'));
-  const highest = plain.size ? Math.max(...plain) : 0;
   const total = Number(data.total);
-
-  // --- total matches the icons on disk ---
-  if (total !== highest) {
-    error(scope, `total is ${total} but the highest icon in ${iconDir}/icons is ${highest}`);
-  }
-
-  const missingFiles = [];
-  for (let i = 1; i <= total; i++) if (!plain.has(i)) missingFiles.push(i);
-  if (missingFiles.length) {
-    error(scope, `no icon file for ${summarise(missingFiles)}`);
-  }
-
-  const extraFiles = [...plain].filter(i => i > total).sort((a, b) => a - b);
-  if (extraFiles.length) {
-    warn(scope, `icon files past total (${total}): ${summarise(extraFiles)}`);
-  }
 
   // --- every id has exactly one type ---
   const typeOf = new Map();
@@ -274,15 +246,10 @@ function checkMode(file) {
   // --- alt art ---
   const altArt = Array.isArray(data.altArt) ? data.altArt : [];
   for (const id of altArt) {
-    if (!alt.has(id)) error(scope, `altArt lists ${id} but ${iconDir}/icons/${id}_alt.webp is missing`);
     if (id < 1 || id > total) error(scope, `altArt lists ${id}, outside 1-${total}`);
   }
-  const unlisted = [...alt].filter(id => !altArt.includes(id)).sort((a, b) => a - b);
-  if (unlisted.length) {
-    warn(scope, `${summarise(unlisted)} have _alt.webp files but are not in altArt`);
-  }
 
-  // --- layered tiles: raw thumbs and the units sidecar ---
+  // --- raw thumbs (one per id, alt art in step with altArt) and the units file ---
   checkLayered(scope, file, iconDir, total, altArt);
 
   // --- required text fields ---

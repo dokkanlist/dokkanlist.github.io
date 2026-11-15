@@ -24,14 +24,12 @@ const COMMIT_API = 'https://api.github.com/repos/dokkanlist/dokkanlist.github.io
 
 const FLIP_HALF_MS = 150;
 
-/* --- Layered tiles (trial, behind a switch) --------------- */
+/* --- Layered tiles ---------------------------------------- */
 
-// Add ?layered=1 to the page address to draw every tile from separate layers
-// (frame, raw thumb, rarity badge, class + type badge) instead of one flat
-// icon. Without it the page behaves exactly as before.
-const LAYERED = new URLSearchParams(window.location.search).get('layered') === '1';
+// Every tile is drawn from four stacked images (type frame, raw thumb, rarity
+// badge, class + type badge) rather than one finished icon per unit.
 
-// Per-unit facts the layered tiles need (game id, class, thumb offset),
+// Per-unit facts the tiles need (game id, class, thumb offset),
 // keyed by the same unit numbers as the main data files.
 const UNIT_SOURCES = { lr: 'data/lr.units.json', dfe: 'data/dfe.units.json' };
 
@@ -185,9 +183,8 @@ async function loadModeData(mode) {
   const response = await fetch(url, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`${MODE_SOURCES[mode]} responded ${response.status}`);
   const data = normaliseData(await response.json());
-  // Layered tiles also need the per-unit sidecar. Only fetched when the
-  // switch is on, so the normal page makes no extra request.
-  if (LAYERED) data.units = await loadUnits(mode);
+  // The tiles also need the per-unit sidecar (class and thumb offset).
+  data.units = await loadUnits(mode);
   modeData[mode] = data;
   return modeData[mode];
 }
@@ -207,7 +204,7 @@ let hideToggle, altArtToggle;
 
 /* --- Rendering ------------------------------------------- */
 
-// Creates one layer image for a layered tile. Layers are decorative (the tile
+// Creates one layer image for a tile. Layers are decorative (the tile
 // itself is the checkbox), so they carry no alt text and ignore the pointer.
 function createLayer(name, src) {
   const image = document.createElement('img');
@@ -219,10 +216,10 @@ function createLayer(name, src) {
   return image;
 }
 
-// Fills a layered tile with its four stacked images, back to front:
+// Fills a tile with its four stacked images, back to front:
 // type frame, raw thumb, rarity badge, class + type badge. Sizes and positions
 // of the shared layers come from CSS (see "Layered tiles" in css/style.css);
-// only the thumb is placed per unit, by setLayeredThumb().
+// only the thumb is placed per unit, by setThumbArt().
 function buildLayers(flair, id, type) {
   const data = modeData[store.mode];
   const unit = data.units[id];
@@ -237,13 +234,13 @@ function buildLayers(flair, id, type) {
     const code = `${GAME_CLASS_DIGIT[unit.class]}${typeIndex}`;
     flair.appendChild(createLayer('type', `${LAYER_DIR}/cha_type_icon_${code}.png`));
   }
-  setLayeredThumb(flair, id);
+  setThumbArt(flair, id);
 }
 
-// Points a layered tile's thumb at the normal or alt art file and applies that
-// art's own offset. The offset is stored in pixels of the original icon canvas
+// Sets (or swaps, for the alt art toggle) the art shown on a tile: points the
+// thumb at the normal or alt art file and applies that art's own offset. The offset is stored in pixels of the original icon canvas
 // and handed to CSS as --tx / --ty, which converts it to a percentage.
-function setLayeredThumb(flair, id) {
+function setThumbArt(flair, id) {
   const data = modeData[store.mode];
   const thumb = flair.querySelector('.layer-thumb');
   const unit = data.units[id];
@@ -256,28 +253,7 @@ function setLayeredThumb(flair, id) {
   thumb.style.setProperty('--ty', String(placement.ty));
 }
 
-// Sets (or swaps, for the alt art toggle) the art shown on a tile.
-function setIconArt(flair, id) {
-  if (LAYERED) {
-    setLayeredThumb(flair, id);
-    return;
-  }
-
-  const data = modeData[store.mode];
-  const suffix = store.altArt && data.altArt.has(id) ? '_alt' : '';
-
-  // Resolved to an absolute URL on purpose. A relative path would be read
-  // against the document for background-image but against css/style.css for
-  // --flair-bg (which ::after consumes), so no single relative path is correct
-  // for both. Absolute also survives being served from a subdirectory.
-  const href = new URL(`${data.iconDir}/icons/${id}${suffix}.webp`, document.baseURI).href;
-  const url = `url("${href}")`;
-
-  flair.style.backgroundImage = url;
-  // Super EZA icons blank their own background and paint it through ::after.
-  if (flair.classList.contains('glow-pulse')) flair.style.setProperty('--flair-bg', url);
-}
-
+// Builds the whole grid for the current side, one tile per unit number.
 function renderGrid() {
   const data = modeData[store.mode];
   const fragment = document.createDocumentFragment();
@@ -304,12 +280,7 @@ function renderGrid() {
       flair.appendChild(overlay);
     }
 
-    if (LAYERED) {
-      flair.classList.add('layered');
-      buildLayers(flair, id, type);
-    } else {
-      setIconArt(flair, id);
-    }
+    buildLayers(flair, id, type);
     fragment.appendChild(flair);
   }
 
@@ -613,30 +584,19 @@ function showRemoved() {
   }
 
   for (const id of hidden) {
-    box.appendChild(LAYERED ? createRemovedTile(id) : createRemovedIcon(id));
+    box.appendChild(createRemovedTile(id));
   }
 
   openModal('removed-modal');
 }
 
-// One entry in the removed-icons list, flat version: the finished icon.
-function createRemovedIcon(id) {
-  const data = modeData[store.mode];
-  const icon = document.createElement('img');
-  icon.className = 'flair';
-  icon.dataset.id = String(id);
-  icon.src = `${data.iconDir}/icons/${id}.webp`;
-  icon.alt = `Icon ${id}`;
-  return icon;
-}
-
-// One entry in the removed-icons list, layered version: a small tile built
-// from the same layers as the grid, labelled for screen readers.
+// One entry in the removed-icons list: a small tile built from the same
+// layers as the grid, labelled for screen readers.
 function createRemovedTile(id) {
   const data = modeData[store.mode];
   const type = data.typeOf.get(id);
   const tile = document.createElement('div');
-  tile.className = 'flair layered';
+  tile.className = 'flair';
   if (type) tile.classList.add('type-' + type);
   tile.dataset.id = String(id);
   tile.setAttribute('role', 'img');
@@ -647,7 +607,6 @@ function createRemovedTile(id) {
 
 function initRemovedModal() {
   document.querySelector('.modal-content2').addEventListener('click', event => {
-    // Matches the flat <img> and the layered tile alike.
     const icon = event.target.closest('[data-id]');
     if (!icon) return;
     store.hidden[store.mode].delete(Number(icon.dataset.id));
@@ -698,42 +657,13 @@ function toast(selector) {
 
 /* --- Image export ---------------------------------------- */
 
-// html-to-image cannot render ::after with a var() background, so the icon art
-// is temporarily re-added as a real <img> sitting above the lightning overlay.
-// Layered tiles are already made of real images, so they need no patching.
-function prepareForCapture() {
-  const patched = LAYERED ? [] : document.querySelectorAll('.flair.glow-pulse');
-  for (const flair of patched) {
-    const background = flair.style.getPropertyValue('--flair-bg');
-    const match = background && background.match(/url\(["']?(.+?)["']?\)/);
-    if (!match) continue;
-
-    const image = document.createElement('img');
-    image.src = match[1];
-    image.className = 'capture-icon-img';
-    image.alt = '';
-    flair.appendChild(image);
-  }
-  document.documentElement.classList.add('capturing');
-}
-
-// Undoes prepareForCapture().
-function restoreAfterCapture() {
-  for (const image of document.querySelectorAll('.capture-icon-img')) image.remove();
-  document.documentElement.classList.remove('capturing');
-}
-
-// Runs one capture of the icon grid and always restores the page afterwards.
-// `method` is the html-to-image function to use ('toPng' or 'toBlob');
-// `extraOptions` are merged over CAPTURE_OPTIONS. Shared by the on-screen
-// preview and the download so the two cannot drift apart.
-async function captureGrid(method, extraOptions) {
-  prepareForCapture();
-  try {
-    return await htmlToImage[method](iconContainer, Object.assign({}, CAPTURE_OPTIONS, extraOptions));
-  } finally {
-    restoreAfterCapture();
-  }
+// Runs one capture of the icon grid. `method` is the html-to-image function
+// to use ('toPng' or 'toBlob'); `extraOptions` are merged over
+// CAPTURE_OPTIONS. Shared by the on-screen preview and the download so the two
+// cannot drift apart. Tiles are made of real images, so nothing on the page
+// needs patching before a capture.
+function captureGrid(method, extraOptions) {
+  return htmlToImage[method](iconContainer, Object.assign({}, CAPTURE_OPTIONS, extraOptions));
 }
 
 const CAPTURE_OPTIONS = {
@@ -886,7 +816,7 @@ function initAltArtToggle() {
     const data = modeData[store.mode];
     for (const flair of grid.children) {
       const id = Number(flair.dataset.id);
-      if (data.altArt.has(id)) setIconArt(flair, id);
+      if (data.altArt.has(id)) setThumbArt(flair, id);
     }
   });
 }
