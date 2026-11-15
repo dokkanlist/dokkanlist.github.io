@@ -20,36 +20,49 @@ This is purely a fan-made project to serve as a progress checker for players.
 
 ## Development
 
-The checklist data lives in `data/lr.json` and `data/dfe.json`. Nothing in
-`js/scripts.js` needs editing to add a character.
+The checklist data is split in two per side:
+
+- `data/lr.units.json` and `data/dfe.units.json` hold one line per unit: its
+  game id, type, class, EZA state and thumb placement. The number of lines is
+  the number of units; nothing else needs counting.
+- `data/lr.json` and `data/dfe.json` hold the texts and the three things kept
+  by hand: the `f2p` list (LR side only), the `altArt` list and the
+  `changelog`.
+
+Nothing in `js/scripts.js` needs editing to add a character.
 
 Every tile is drawn in the browser from four stacked images: a type frame, the
 character's raw 250 px game thumb, a rarity badge and a class + type badge. The
 frames and badges are shared (`images/layers/`), so a new character only needs
 its thumb.
 
-### Adding a character
+### A unit line
+
+```
+"196": {"id": 1034591, "type": "agl", "class": "super", "eza": "eza", "tx": -1, "ty": 1},
+```
+
+- The key is your own unit number. Keys must run from 1 with no gaps.
+- `id` is the game's card id (7 digits).
+- `type` is `agl`, `teq`, `str`, `phy` or `int` and picks the frame colour.
+- `class` is `super` or `extreme` and picks the class + type badge.
+- `eza` is `eza` or `super` (Super EZA). Leave it out for a unit with no EZA.
+- `tx` / `ty` place the thumb, in pixels of the original icon canvas. DFE
+  units always use `6, -4`. LR units usually use `-1, 1`; nudge by a pixel or
+  two if the art sits off-centre in its frame.
+- `alt` (only for units in `altArt`) is `{"id": ..., "tx": ..., "ty": ...}` for
+  the alt art thumb.
+
+### Adding a character by hand
 
 1. Save the raw game thumb (250 x 250 px PNG, the file the game calls
    `card_<id>_thumb.png`) as `images/lr/thumbs/<n>.png` or
    `images/dfe/thumbs/<n>.png`, where `<n>` is the next number in sequence.
-2. Add a line for `<n>` to `data/lr.units.json` or `data/dfe.units.json`:
-
-   ```
-   "196": {"id": 1034591, "class": "super", "tx": -1, "ty": 1},
-   ```
-
-   - `id` is the game's card id (7 digits), kept for reference.
-   - `class` is `super` or `extreme` and picks the class + type badge.
-   - `tx` / `ty` place the thumb, in pixels of the original icon canvas.
-     DFE units always use `6, -4`. LR units usually use `-1, 1`; nudge by a
-     pixel or two if the art sits off-centre in its frame.
-3. In the matching data file, bump `total` and add the id to the right entry
-   under `types` (this picks the frame colour). Add it to `eza` / `eza2` if it
-   has one.
-4. For alt art, also save `<n>_alt.png` in the same thumbs folder, add
-   `"alt": {"id": ..., "tx": ..., "ty": ...}` to the unit's line, and add the
-   id to `altArt` in the data file.
+2. Add a line for `<n>` to the end of `data/lr.units.json` or
+   `data/dfe.units.json` (see "A unit line").
+3. If it is free to play, add `<n>` to `f2p` in `data/lr.json`.
+4. For alt art, also save `<n>_alt.png` in the same thumbs folder, add the
+   `alt` entry to the unit's line, and add `<n>` to `altArt` in the data file.
 5. Update `changelog` (type names in the text are colourised automatically).
 6. Validate and stamp:
 
@@ -57,13 +70,16 @@ its thumb.
    node validate-data.js --stamp
    ```
 
-`validate-data.js` checks that every id has exactly one type, that the type
-ranges cover `1..total` with no gaps or duplicates, that every id has a thumb
-file and a well formed units line, that alt-art entries have a matching
-`_alt.png`, and that all the shared layer images are present. It exits non-zero
-if anything is wrong. `--stamp` also refreshes the cache-busting build id in
-`index.html`, so returning visitors get the new CSS/JS instead of a stale
-cached copy - run it whenever you change `css/`, `js/`, or `data/`.
+An EZA or Super EZA is a one word edit: set `"eza": "eza"` or
+`"eza": "super"` on the unit's line.
+
+`validate-data.js` checks that the unit numbers run from 1 with no gaps, that
+every unit has a valid type, class and EZA state and a thumb file, that the
+`f2p` and `altArt` lists only name units that exist, that alt-art entries have
+a matching `_alt.png`, and that all the shared layer images are present. It
+exits non-zero if anything is wrong. `--stamp` also refreshes the cache-busting
+build id in `index.html`, so returning visitors get the new CSS/JS instead of a
+stale cached copy - run it whenever you change `css/`, `js/`, or `data/`.
 
 The finished icons in `images/lr/icons/` and `images/dfe/icons/` are the old
 one-image-per-character versions. The site no longer loads them.

@@ -3,8 +3,9 @@
 /* ============================================================
    Dokkan Battle Checklist
    ------------------------------------------------------------
-   Character data lives in data/lr.json and data/dfe.json.
-   Nothing in this file needs editing to add a character.
+   Character data lives in data/lr.units.json and data/dfe.units.json
+   (one line per unit); data/lr.json and data/dfe.json hold the texts and
+   the hand-kept lists. Nothing in this file needs editing to add a character.
    Run `node validate-data.js` after editing the data files.
    ============================================================ */
 
@@ -42,8 +43,8 @@ const TOAST_MS = 1650;
 // Every tile is drawn from four stacked images (type frame, raw thumb, rarity
 // badge, class + type badge) rather than one finished icon per unit.
 
-// Per-unit facts the tiles need (game id, class, thumb offset),
-// keyed by the same unit numbers as the main data files.
+// Per-unit facts (game id, type, class, EZA state, thumb offset), keyed by the
+// owner's unit numbers. These files also decide how many units there are.
 const UNIT_SOURCES = { lr: 'data/lr.units.json', dfe: 'data/dfe.units.json' };
 
 // Shared layer images, named as in the game files.
@@ -227,12 +228,22 @@ function loadStore() {
 const modeData = {};
 let buildId = '';
 
-// Turns a raw data file into the lookups the page uses: a type per unit number
-// and Sets for the EZA, Super EZA, F2P and alt art lists.
-function normaliseData(raw) {
+// Turns one side's two files into the lookups the page uses.
+//   raw    data/<mode>.json: texts, plus the lists kept by hand (f2p, altArt)
+//   units  data/<mode>.units.json: one entry per unit number, holding its
+//          type, class, EZA state ("eza" or "super", absent for none) and
+//          thumb placement
+// The number of units is simply the number of entries in the units file.
+function normaliseData(raw, units) {
   const typeOf = new Map();
-  for (const type of TYPES) {
-    for (const id of parseRanges(raw.types && raw.types[type])) typeOf.set(id, type);
+  const eza = new Set();
+  const eza2 = new Set();
+  for (const [key, unit] of Object.entries(units)) {
+    const id = Number(key);
+    if (TYPES.includes(unit.type)) typeOf.set(id, unit.type);
+    // A Super EZA is also an EZA, so it goes in both sets.
+    if (unit.eza === 'eza' || unit.eza === 'super') eza.add(id);
+    if (unit.eza === 'super') eza2.add(id);
   }
   return {
     label: raw.label,
@@ -240,11 +251,12 @@ function normaliseData(raw) {
     favicon: raw.favicon,
     iconDir: raw.iconDir,
     idSuffix: raw.idSuffix || '',
-    total: Number(raw.total) || 0,
+    total: Object.keys(units).length,
     changelog: Array.isArray(raw.changelog) ? raw.changelog : [],
+    units,
     typeOf,
-    eza: new Set(parseRanges(raw.eza)),
-    eza2: new Set(parseRanges(raw.eza2)),
+    eza,
+    eza2,
     f2p: new Set(parseRanges(raw.f2p)),
     // Declaring an "f2p" key opts a mode into the F2P filter, so an empty list
     // still shows the bar while a mode that omits the key entirely hides it.
@@ -258,19 +270,17 @@ async function loadModeData(mode) {
   if (modeData[mode]) return modeData[mode];
   const url = MODE_SOURCES[mode] + (buildId ? `?v=${buildId}` : '');
   // no-cache = always revalidate with the server (a cheap 304 when unchanged).
-  // The data files are the ones edited most often and are only ~2KB, so this
+  // The data files are the ones edited most often and are small, so this
   // means a data edit shows up on a plain refresh even if --stamp was skipped,
   // instead of the browser silently serving the previous list from cache.
   const response = await fetch(url, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`${MODE_SOURCES[mode]} responded ${response.status}`);
-  const data = normaliseData(await response.json());
-  // The tiles also need the per-unit sidecar (class and thumb offset).
-  data.units = await loadUnits(mode);
-  modeData[mode] = data;
+  const raw = await response.json();
+  modeData[mode] = normaliseData(raw, await loadUnits(mode));
   return modeData[mode];
 }
 
-// Fetches data/<mode>.units.json: { "<n>": { id, class, tx, ty, alt? } }.
+// Fetches data/<mode>.units.json: { "<n>": { id, type, class, eza?, tx, ty, alt? } }.
 async function loadUnits(mode) {
   const url = UNIT_SOURCES[mode] + (buildId ? `?v=${buildId}` : '');
   const response = await fetch(url, { cache: 'no-cache' });

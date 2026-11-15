@@ -31,7 +31,8 @@ function write(root, file, content) {
   fs.writeFileSync(full, content);
 }
 
-// A valid data file for one side: 3 units, unit 2 has alt art.
+// A valid data file for one side: the texts and the lists kept by hand.
+// Unit 2 has alt art, unit 1 is free to play.
 function sideData(mode) {
   return {
     mode,
@@ -40,22 +41,19 @@ function sideData(mode) {
     favicon: 'icon.ico',
     iconDir: `images/${mode}`,
     idSuffix: '',
-    total: 3,
-    types: { agl: '1', teq: '2', str: '3', phy: '', int: '' },
-    eza: '1-2',
-    eza2: '1',
+    f2p: '1',
     altArt: [2],
     changelog: ['First line']
   };
 }
 
-// A valid units file to go with sideData(). `base` keeps game ids unique
-// between the two sides.
+// A valid units file to go with sideData(): 3 units, one Super EZA, one EZA,
+// one with neither. `base` keeps game ids unique between the two sides.
 function sideUnits(base) {
   return {
-    1: { id: base + 1, class: 'super', tx: 0, ty: 0 },
-    2: { id: base + 2, class: 'extreme', tx: -1, ty: 1, alt: { id: base + 9, tx: 0, ty: 0 } },
-    3: { id: base + 3, class: 'super', tx: 6, ty: -4 }
+    1: { id: base + 1, type: 'agl', class: 'super', eza: 'super', tx: 0, ty: 0 },
+    2: { id: base + 2, type: 'teq', class: 'extreme', eza: 'eza', tx: -1, ty: 1, alt: { id: base + 9, tx: 0, ty: 0 } },
+    3: { id: base + 3, type: 'str', class: 'super', tx: 6, ty: -4 }
   };
 }
 
@@ -114,47 +112,60 @@ test('accepts a valid fixture', t => {
   assert.match(out, /All checks passed/);
 });
 
+test('the summary line counts units, EZAs and types from the units file', t => {
+  const root = makeFixture();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { out } = run(root);
+  assert.match(out, /lr\.json\s+total\s+3\s+EZA\s+2\s+Super\s+1\s+F2P\s+1\s+AGL 1\s+TEQ 1\s+STR 1\s+PHY 0\s+INT 0/);
+});
+
 /* --- data file rules --------------------------------------- */
 
 rejects('a mode that does not match the file name', /mode must be "lr"/, s => { s.lr.mode = 'dfe'; });
 rejects('an unknown top level field', /unknown field "ezza"/, s => { s.lr.ezza = '1'; });
+rejects('a total put back in the data file', /"total" no longer belongs here/, s => { s.lr.total = 3; });
+rejects('type lists put back in the data file', /"types" no longer belongs here/, s => { s.lr.types = { agl: '1' }; });
+rejects('an eza list put back in the data file', /"eza" no longer belongs here/, s => { s.lr.eza = '1'; });
 rejects('a missing label', /missing "label"/, s => { delete s.lr.label; });
 rejects('a favicon that is not on disk', /favicon "nope\.ico" does not exist/, s => { s.lr.favicon = 'nope.ico'; });
-rejects('a total that is not a whole number', /total must be a whole number/, s => { s.lr.total = '3'; });
-rejects('an unknown type key', /types has an unknown key "fire"/, s => { s.lr.types.fire = ''; });
-rejects('a missing type key', /types\.int must be a range string/, s => { delete s.lr.types.int; });
-rejects('a unit with no type', /no type assigned to 3/, s => { s.lr.types.str = ''; });
-rejects('a unit with two types', /id 2 is listed as both teq and str/, s => { s.lr.types.str = '2-3'; });
-rejects('a type id past total', /types\.str lists 4, outside 1-3/, s => { s.lr.types.str = '3-4'; });
-rejects('a malformed range', /eza: malformed value "1\.5"/, s => { s.lr.eza = '1.5'; });
-rejects('a backwards range', /eza: range "2-1" runs backwards/, s => { s.lr.eza = '2-1'; });
-rejects('an eza id past total', /eza lists 9, outside 1-3/, s => { s.lr.eza = '1-2, 9'; });
-rejects('an eza id listed twice', /eza lists 2 more than once/, s => { s.lr.eza = '1-2, 2'; });
-rejects('a Super EZA that is not an EZA', /3 are in eza2 but not in eza/, s => { s.lr.eza2 = '1, 3'; });
-rejects('an eza that is not a range string', /eza must be a range string/, s => { s.lr.eza = [1, 2]; });
+rejects('a malformed f2p range', /f2p: malformed value "1\.5"/, s => { s.lr.f2p = '1.5'; });
+rejects('a backwards f2p range', /f2p: range "2-1" runs backwards/, s => { s.lr.f2p = '2-1'; });
+rejects('an f2p id past the last unit', /f2p lists 9, outside 1-3/, s => { s.lr.f2p = '1, 9'; });
 rejects('an f2p id listed twice', /f2p lists 1 more than once/, s => { s.lr.f2p = '1, 1'; });
+rejects('an f2p that is not a range string', /f2p must be a range string/, s => { s.lr.f2p = [1]; });
 rejects('altArt that is not an array', /altArt must be an array/, s => { s.lr.altArt = '2'; });
 rejects('a repeated altArt id', /altArt lists 2 more than once/, s => { s.lr.altArt = [2, 2]; });
+rejects('an altArt id past the last unit', /altArt lists 7, outside 1-3/, s => { s.lr.altArt = [2, 7]; });
 rejects('a changelog with an empty line', /changelog lines must be non-empty/, s => { s.lr.changelog = ['ok', ' ']; });
 rejects('a missing changelog', /changelog must be an array/, s => { delete s.lr.changelog; });
 
-/* --- thumbs, units and layers ------------------------------ */
+/* --- units file -------------------------------------------- */
 
-rejects('a missing thumb', /no thumb file for 3/, null,
-  root => fs.rmSync(path.join(root, 'images/lr/thumbs/3.png')));
-rejects('a thumb numbered past total', /total is 3 but images\/lr\/thumbs also has 4/, null,
-  root => write(root, 'images/lr/thumbs/4.png', ''));
-rejects('an unexpected file among the thumbs', /unexpected file images\/lr\/thumbs\/notes\.txt/, null,
-  root => write(root, 'images/lr/thumbs/notes.txt', ''));
-rejects('alt art with no alt thumb', /altArt lists 2 but images\/lr\/thumbs\/2_alt\.png is missing/, null,
+rejects('a gap in the unit numbers', /has 2 entries, so the keys must be 1 to 2; found "3"/, s => { delete s.lrUnits[2]; s.lr.altArt = []; },
   root => fs.rmSync(path.join(root, 'images/lr/thumbs/2_alt.png')));
-rejects('a unit missing from the units file', /lr\.units\.json: no entry for 3/, s => { delete s.lrUnits[3]; });
+rejects('a unit key that is not a number', /keys must be 1 to 3; found "x"/, s => { s.lrUnits.x = s.lrUnits[3]; delete s.lrUnits[3]; });
+rejects('a unit with no type', /unit 3: type must be one of agl, teq, str, phy, int/, s => { delete s.lrUnits[3].type; });
+rejects('a misspelt type', /unit 1: type must be one of/, s => { s.lrUnits[1].type = 'fire'; });
 rejects('a bad class', /unit 1: class must be one of super, extreme/, s => { s.lrUnits[1].class = 'hyper'; });
+rejects('a bad eza value', /unit 1: eza must be "eza" or "super"/, s => { s.lrUnits[1].eza = true; });
 rejects('a decimal thumb offset', /unit 1: tx must be a whole number/, s => { s.lrUnits[1].tx = 0.5; });
 rejects('a duplicate game id', /id 1000001 is already used by unit 1/, s => { s.lrUnits[3].id = 1000001; });
 rejects('an unknown units field', /unit 1: unknown field "name"/, s => { s.lrUnits[1].name = 'x'; });
 rejects('alt art with no alt entry in the units file', /unit 2: is in altArt but has no "alt" entry/,
   s => { delete s.lrUnits[2].alt; });
+rejects('an alt entry for a unit that is not in altArt', /unit 2: has an "alt" entry but is not in altArt/,
+  s => { s.lr.altArt = []; });
+
+/* --- thumbs and layers ------------------------------------- */
+
+rejects('a missing thumb', /no thumb file for 3/, null,
+  root => fs.rmSync(path.join(root, 'images/lr/thumbs/3.png')));
+rejects('a thumb with no unit line', /there are 3 units but images\/lr\/thumbs also has 4/, null,
+  root => write(root, 'images/lr/thumbs/4.png', ''));
+rejects('an unexpected file among the thumbs', /unexpected file images\/lr\/thumbs\/notes\.txt/, null,
+  root => write(root, 'images/lr/thumbs/notes.txt', ''));
+rejects('alt art with no alt thumb', /altArt lists 2 but images\/lr\/thumbs\/2_alt\.png is missing/, null,
+  root => fs.rmSync(path.join(root, 'images/lr/thumbs/2_alt.png')));
 rejects('a missing layer image', /images\/layers\/cha_rare_ur\.png is missing/, null,
   root => fs.rmSync(path.join(root, 'images/layers/cha_rare_ur.png')));
 
