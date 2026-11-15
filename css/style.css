@@ -299,7 +299,7 @@ position:relative;
 display:inline-flex;
 gap:2px;
 padding:7px 8px 4px;
-border:1px solid #22304f;
+border:1px solid #3d5788;
 border-radius:5px;
 }
 
@@ -312,11 +312,11 @@ top:-6px;
 left:8px;
 padding:0 4px;
 background:#000010;
-font-size:9px;
+font-size:10px;
 font-weight:700;
 letter-spacing:.14em;
 text-transform:uppercase;
-color:#7f93b5;
+color:#b4c6ea;
 line-height:1;
 }
 
@@ -342,9 +342,16 @@ color:#e6eeff;
 border-bottom-color:#6ee8fd;
 }
 
+/* Overrides the site-wide green button:hover fill and the button:active
+   shrink, on both words, chosen or not. */
+.art-picker button:hover,
+.art-picker button:active {
+background:none;
+transform:none;
+}
+
 .art-picker button:not(.active):hover {
 color:#b8c8e6;
-background:none;
 }
 
 /* Keyboard focus gets a visible ring, since the plain words have no border. */
@@ -364,19 +371,28 @@ display:grid;
 /* minmax(0,1fr), not 1fr: a plain 1fr floors at its content width, so the
    toggle column would grow and shove the centre column off-centre. */
 grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-align-items:center;
+/* Bottom-aligned: the art picker makes the toggle column taller, and this
+   keeps the remove icons toggle level with the buttons below the picker. */
+align-items:end;
 column-gap:12px;
 margin-top:10px;
 }
 
+/* The art picker stacked above the remove icons toggle, both hard left.
+   Aligned to the bottom of the row so the toggle sits level with the
+   centred buttons and the picker rises above them. */
 .toggle-row {
 grid-column:1;
 justify-self:start;
+align-self:end;
 display:flex;
-flex-wrap:wrap;
-align-items:center;
-gap:6px 22px;
+flex-direction:column;
+align-items:flex-start;
+gap:10px;
 max-width:100%;
+/* The toggle (20px) is shorter than the buttons (31px); this lifts its
+   middle level with theirs. */
+margin-bottom:5px;
 }
 
 /* Inside the toggle row the labels sit directly beside their switches, so
@@ -1086,6 +1102,9 @@ font-weight: 700;
     max-width: 100%;
     padding-left: 0;
     justify-content: center;
+    /* Centre the picker and toggle stack instead of the desktop bottom/left. */
+    align-self: center;
+    align-items: center;
   }
 
   #toggleButton {
