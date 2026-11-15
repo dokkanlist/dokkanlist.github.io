@@ -1,168 +1,114 @@
-.lr .flair {
-height:76px;
-width:76px;
-cursor:pointer;
-border:3px solid transparent;
-background-clip:padding-box;
-background-size: contain;
-display: inline-block;
-position:relative;
+/* ============================================================
+   Tiles ("flairs") and their EZA badges
+   ------------------------------------------------------------
+   One set of rules serves both sides of the checklist. Anything
+   that differs between the LR and DFE side, or between screen
+   sizes, is a custom property set in the "Sizes" section below,
+   so each number lives in exactly one place.
+   ============================================================ */
+
+/* ═══ Sizes ═══ */
+/* --tile            width and height of a tile, without its 3px border
+   --eza-*           EZA badge: width, height, distance from right / bottom
+   --eza2-*          Super EZA badge: the same four
+   The LR and DFE badges sit at slightly different heights because the two
+   frames are drawn at different places on their canvases. */
+.lr {
+  --tile: 76px;
+  --eza-w: 18px;  --eza-h: 16px;  --eza-r: 4px;  --eza-b: 4px;
+  --eza2-w: 24px; --eza2-h: 21px; --eza2-r: 4px; --eza2-b: 2px;
 }
 
+.dfe {
+  --tile: 76px;
+  --eza-w: 18px;  --eza-h: 16px;  --eza-r: 4px;  --eza-b: 7px;
+  --eza2-w: 26px; --eza2-h: 22px; --eza2-r: 3px; --eza2-b: 7px;
+}
+
+/* Very wide screens: larger tiles and badges. */
+@media only screen and (min-width: 1921px) {
+  .lr {
+    --tile: 90px;
+    --eza-w: 20px;  --eza-h: 18px;  --eza-r: 6px;  --eza-b: 5px;
+    --eza2-w: 27px; --eza2-h: 23px; --eza2-r: 4px; --eza2-b: 4px;
+  }
+
+  .dfe {
+    --tile: 89px;
+    --eza-w: 20px;  --eza-h: 18px;  --eza-r: 6px;
+    --eza2-w: 28px; --eza2-h: 24px; --eza2-r: 4px;
+  }
+}
+
+/* Phones: smaller tiles and badges. */
+@media only screen and (max-width: 760px) {
+  .lr {
+    --tile: 50px;
+    --eza-w: 15px;  --eza-h: 12px;  --eza-r: 2px;  --eza-b: 2px;
+    --eza2-w: 20px; --eza2-h: 17px; --eza2-r: 2px; --eza2-b: 0px;
+  }
+
+  .dfe {
+    --tile: 55px;
+    --eza-w: 13px;  --eza-h: 12px;  --eza-r: 2px;
+    --eza2-w: 20px; --eza2-h: 17px; --eza2-r: 2px;
+  }
+}
+
+/* ═══ Tile ═══ */
+/* A tile is dimmed until it is selected. The layers inside it are placed by
+   "Layered tiles" in style.css; overflow stays visible because the art and
+   the badges are meant to spill past the tile's own box. */
 .flair {
-opacity:0.35;
-filter:alpha(opacity=35);
-position: relative;
-overflow: visible !important;
-z-index: 1;
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+  width: var(--tile);
+  height: var(--tile);
+  border: 3px solid transparent;
+  opacity: 0.35;
+  overflow: visible;
+  cursor: pointer;
 }
 
 .flair:not(.selected):hover {
-opacity:0.7;
+  opacity: 0.7;
 }
 
 .flair.selected {
-/*background-color: rgba(0,0,0,0.3);*/
-/*border-radius:10px;*/
-opacity:1;
+  opacity: 1;
 }
 
-@media only screen and (min-width: 1921px) {
-  .lr .flair {
-    height:90px;
-    width:90px;
-  }
-  .lr .eza:before {
-    height:18px!important;
-    width:20px!important;
-    bottom:5px!important;
-    right:6px!important;
-  }
-  .lr .eza2:before {
-    height:23px!important;
-    width:27px!important;
-    bottom:4px!important;
-    right:4px!important;
-  }
-}
-
-@media only screen and (max-width: 760px) {
-  .lr .flair {
-    height:50px;
-    width:50px;
-  }
-  .lr .eza:before {
-    height:12px!important;
-    width:15px!important;
-    bottom:2px!important;
-    right:2px!important;
-  }
-  .lr .eza2:before {
-    height:17px!important;
-    width:20px!important;
-    right:2px!important;
-    bottom:0px!important;
-  }
-}
-
+/* A tile removed from the list (the "remove icons" switch). */
 .disabled {
-  display: none!important;
+  display: none !important;
 }
 
-.lr .eza:before {
-content:"";
-display:block;
-height: 16px;
-width: 18px;
-background:url(../images/eza.webp);
-position:absolute;
-bottom:4px;
-right:4px;
-background-size:contain;
+/* ═══ EZA badges ═══ */
+/* Drawn in the bottom right corner through ::before, above the tile's layers
+   (z-index 1). A Super EZA tile has both classes; its rule comes second, so
+   the Super EZA badge replaces the plain one. */
+.flair.eza::before,
+.flair.eza2::before {
+  content: "";
+  display: block;
+  position: absolute;
+  z-index: 3;
+  background-size: contain;
 }
 
-div.eza, div.eza2 {
-position:relative;
+.flair.eza::before {
+  width: var(--eza-w);
+  height: var(--eza-h);
+  right: var(--eza-r);
+  bottom: var(--eza-b);
+  background-image: url(../images/eza.webp);
 }
 
-.lr .eza2:before {
-content:"";
-display:block;
-height: 21px;
-width: 24px;
-background:url(../images/eza2.webp);
-position:absolute;
-bottom:2px;
-right:4px;
-background-size:contain;
-}
-
-/*--- DFE Section --*/
-.dfe .flair {
-height:76px;
-width:76px;
-cursor:pointer;
-border:3px solid transparent;
-background-clip:padding-box;
-background-size: contain;
-display: inline-block;
-background-repeat: no-repeat;
-}
-
-@media only screen and (min-width: 1921px) {
-  .dfe .flair {
-    height:89px;
-    width:89px;
-  }
-  .dfe .eza:before {
-    height:18px!important;
-    width:20px!important;
-    right:6px!important;
-  }
-  .dfe .eza2:before {
-    height:24px!important;
-    width:28px!important;
-    right:4px!important;
-  }
-}
-
-@media only screen and (max-width: 760px) {
-  .dfe .flair {
-    height:55px;
-    width:55px;
-  }
-  .dfe .eza:before {
-    height:12px!important;
-    width:13px!important;
-    right:2px!important;
-  }
-  .dfe .eza2:before {
-    height:17px!important;
-    width:20px!important;
-    right:2px!important;
-  }
-}
-
-.dfe .eza:before {
-content:"";
-display:block;
-height: 16px;
-width: 18px;
-background:url(../images/eza.webp);
-position:absolute;
-bottom:7px;
-right:4px;
-background-size:contain;
-}
-
-.dfe .eza2:before {
-content:"";
-display:block;
-height: 22px;
-width: 26px;
-background:url(../images/eza2.webp);
-position:absolute;
-bottom:7px;
-right:3px;
-background-size:contain;
+.flair.eza2::before {
+  width: var(--eza2-w);
+  height: var(--eza2-h);
+  right: var(--eza2-r);
+  bottom: var(--eza2-b);
+  background-image: url(../images/eza2.webp);
 }
