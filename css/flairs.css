@@ -12,17 +12,21 @@
    --eza-*           EZA badge: width, height, distance from right / bottom
    --eza2-*          Super EZA badge: the same four
    The LR and DFE badges sit at slightly different heights because the two
-   frames are drawn at different places on their canvases. */
+   frames are drawn at different places on their canvases.
+   85px is the usual desktop size because it shrinks the 250px LR thumb
+   exactly 3:1 and the 130px type icon about 4:1, which reads clearer than
+   the old 76px (3.4:1 and 4.4:1). Its badge sizes sit between the old 76px
+   and the 90px values. */
 .lr {
-  --tile: 76px;
-  --eza-w: 18px;  --eza-h: 16px;  --eza-r: 4px;  --eza-b: 4px;
-  --eza2-w: 24px; --eza2-h: 21px; --eza2-r: 4px; --eza2-b: 2px;
+  --tile: 85px;
+  --eza-w: 19px;  --eza-h: 17px;  --eza-r: 5px;  --eza-b: 5px;
+  --eza2-w: 26px; --eza2-h: 22px; --eza2-r: 4px; --eza2-b: 3px;
 }
 
 .dfe {
-  --tile: 76px;
-  --eza-w: 18px;  --eza-h: 16px;  --eza-r: 4px;  --eza-b: 7px;
-  --eza2-w: 26px; --eza2-h: 22px; --eza2-r: 3px; --eza2-b: 7px;
+  --tile: 85px;
+  --eza-w: 19px;  --eza-h: 17px;  --eza-r: 5px;  --eza-b: 7px;
+  --eza2-w: 27px; --eza2-h: 23px; --eza2-r: 4px; --eza2-b: 7px;
 }
 
 /* Very wide screens: larger tiles and badges. */
