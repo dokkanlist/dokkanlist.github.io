@@ -525,6 +525,66 @@ box-shadow: 1px 2px 3px #888888;
 background: #ff9c9c;
 }
 
+/* A toast is shown by toast() in js/scripts.js adding .toast-show, which
+   fades it in, holds it and fades it out. The total time must match TOAST_MS
+   in that file. */
+#display-copied.toast-show, #imported.toast-show, #import-error.toast-show {
+display: block;
+animation: toast-fade 1650ms linear forwards;
+}
+
+@keyframes toast-fade {
+  0%   { opacity: 0; }
+  9%   { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* "Load backup file" and "Download backup file": same look as the Import and
+   Copy buttons, wide enough for their longer labels. */
+.btn-file {
+border-color: transparent;
+background-color: #3abff8;
+color: #0e4259;
+line-height: 30px;
+padding: 5px 12px;
+font-size: 14px;
+border-radius: 7px;
+}
+
+/* Notice banner at the top of the page (see showNotice() in js/scripts.js).
+   Only appears when saving fails or saved data could not be read. */
+#notice {
+position: relative;
+z-index: 50;
+max-width: 700px;
+margin: 8px auto;
+padding: 10px 40px 10px 14px;
+background: #11081b;
+color: #eee;
+border: 2px solid #f87272;
+border-radius: 7px;
+font-size: 14px;
+text-align: left;
+overflow-wrap: anywhere;
+}
+
+#notice[hidden] {
+display: none;
+}
+
+#notice-close {
+position: absolute;
+top: 6px;
+right: 8px;
+background: transparent;
+border: 0;
+color: #eee;
+font-size: 20px;
+line-height: 1;
+cursor: pointer;
+}
+
 #import-modal .warning {
 color: #eee;
 background: #11081b;
@@ -766,6 +826,24 @@ color: #68f75b;
   width: calc(var(--type-size) / var(--canvas) * 100%);
 }
 
+/* A tile whose thumb file is missing (see handleLayerError() in
+   js/scripts.js) shows its unit number in the middle of the frame, so it can
+   still be recognised and ticked. */
+.flair.missing::after {
+  content: attr(data-id);
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+  pointer-events: none;
+}
+
 /* Keep the EZA and Super EZA badges above the layers on every tile. */
 .flair::before {
   z-index: 3;
@@ -1005,5 +1083,22 @@ color: #68f75b;
   #counter {
     display: block;
     padding: 0 5px;
+  }
+}
+
+
+/* ═══ Reduced motion ═══ */
+/* For visitors whose device asks for less motion: the Super EZA lightning
+   holds its first frame, and the side switch swaps without the flip or blur
+   (js/scripts.js also skips the flip timing in that case). */
+@media (prefers-reduced-motion: reduce) {
+  .flair.selected.glow-pulse .lightning-overlay {
+    animation: none;
+  }
+
+  #toggleButton,
+  #header,
+  .glitch-blur {
+    transition: none;
   }
 }

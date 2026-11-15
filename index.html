@@ -22,15 +22,10 @@
   <link rel="icon" id="favicon" type="image/x-icon" href="stone.ico">
 
   <!--stylesheets-->
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
-  <link rel="stylesheet" href="css/style.css?v=c4fee239" type="text/css" media="all">
-  <link rel="stylesheet" href="css/flairs.css?v=c4fee239" type="text/css" media="all">
+  <link rel="stylesheet" href="css/style.css?v=889637d1" type="text/css" media="all">
+  <link rel="stylesheet" href="css/flairs.css?v=889637d1" type="text/css" media="all">
 
   <!--scripts (pinned + SRI so a CDN release cannot silently break the page)-->
-  <script defer
-          src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"
-          integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs"
-          crossorigin="anonymous"></script>
   <script defer
           src="https://unpkg.com/html-to-image@1.11.13/dist/html-to-image.js"
           integrity="sha384-Tha/42qsYmpYmQ07pX+nJzkKumO0BzKJxK/uzVc7xyBQxVCUgQBhQIG8L7vXK+9C"
@@ -39,14 +34,21 @@
           src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"
           integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy"
           crossorigin="anonymous"></script>
-  <script defer src="js/lz-string.js?v=c4fee239"></script>
-  <script defer src="js/ranges.js?v=c4fee239"></script>
-  <script defer src="js/scripts.js?v=c4fee239"></script>
+  <script defer src="js/lz-string.js?v=889637d1"></script>
+  <script defer src="js/ranges.js?v=889637d1"></script>
+  <script defer src="js/scripts.js?v=889637d1"></script>
 
 </head>
 
-<body data-build="c4fee239">
+<body data-build="889637d1">
   <noscript>JavaScript is required to run this page.</noscript>
+
+  <!--Notice banner: hidden unless something needs the visitor's attention
+      (saving failed, or saved data could not be read). See showNotice().-->
+  <div id="notice" role="alert" hidden>
+    <span id="notice-text"></span>
+    <button type="button" id="notice-close" aria-label="Dismiss this message">&times;</button>
+  </div>
 
   <div id="header"></div>
 
@@ -157,6 +159,12 @@
           <button type="button" class="close-btn btn-error">Cancel</button>
           <button type="button" class="btn" id="import-btn">Import</button>
         </div>
+        <!--Alternative to pasting a code: restore from a file saved with
+            "Download backup file" in the Export window.-->
+        <div class="modal-action">
+          <button type="button" class="btn btn-file" id="load-backup">Load backup file</button>
+          <input type="file" id="backup-file" accept=".json,application/json" hidden>
+        </div>
         <div id="imported" role="status">Checklist imported!</div>
         <div id="import-error" role="status">Invalid or outdated code, please generate a new export.</div>
       </div>
@@ -175,6 +183,10 @@
         <div class="modal-action">
           <button type="button" class="close-btn btn-error">Cancel</button>
           <button type="button" class="btn" id="copy-export">Copy</button>
+        </div>
+        <!--Saves the whole checklist (both sides) as a file.-->
+        <div class="modal-action">
+          <button type="button" class="btn btn-file" id="download-backup">Download backup file</button>
         </div>
         <div id="display-copied" role="status">Copied to clipboard!</div>
       </div>
