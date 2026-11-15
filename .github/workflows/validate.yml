@@ -1,0 +1,30 @@
+# Runs the unit tests and the data validator on every push and pull request.
+# Report only: GitHub Pages still deploys from master whatever the result, so
+# a red cross here means "fix it", not "the deploy was stopped".
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      # Range parser and validator tests (no dependencies to install).
+      - name: Unit tests
+        run: node --test
+
+      # Checks the data, thumbs, units files and layers, and fails if
+      # index.html carries an out of date build id.
+      - name: Validate data and build id
+        run: node validate-data.js --check-stamp

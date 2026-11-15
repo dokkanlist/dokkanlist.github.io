@@ -1,0 +1,17 @@
+#!/bin/sh
+# Pre-commit hook: validates the checklist data, refreshes the build id in
+# index.html and adds index.html to the commit. The commit is refused if
+# validation fails.
+#
+# Switch it on once per clone with:   npm run hooks
+# (which runs: git config core.hooksPath .githooks)
+#
+# The build id is worked out from the files as they are on disk, so commit
+# all your css/js/data edits together rather than staging only some of them.
+
+node validate-data.js --stamp || {
+  echo ""
+  echo "Commit stopped: fix the errors above, then commit again."
+  exit 1
+}
+git add index.html

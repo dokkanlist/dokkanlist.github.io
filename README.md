@@ -74,8 +74,20 @@ no dependencies):
 ```
 npm run validate   # node validate-data.js
 npm run stamp      # node validate-data.js --stamp
-npm test           # unit tests for the shared range parser (js/ranges.js)
+npm run check      # node validate-data.js --check-stamp (fails on a stale build id, writes nothing)
+npm test           # unit tests for the range parser and the validator
+npm run hooks      # switch on the pre-commit hook (once per clone)
 ```
+
+### Automatic checks
+
+- **Pre-commit hook** (`.githooks/pre-commit`): after `npm run hooks`, every
+  `git commit` validates the data, refreshes the build id and adds
+  `index.html` to the commit. A commit with invalid data is refused, so the
+  stamp step can no longer be forgotten.
+- **GitHub workflow** (`.github/workflows/validate.yml`): runs the tests and
+  `--check-stamp` on every push and pull request. It only reports; GitHub Pages
+  still deploys from `master` whatever the result.
 
 `js/ranges.js` holds the one range-string parser used by both the site and the
 validator. It only accepts whole numbers and `start-end` ranges, and refuses

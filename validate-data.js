@@ -8,10 +8,13 @@
  * images against what is actually on disk.
  * Run it after editing a data file, before committing:
  *
- *   node validate-data.js            report problems
- *   node validate-data.js --stamp    also refresh the cache-busting build id
+ *   node validate-data.js                report problems
+ *   node validate-data.js --stamp        also refresh the cache-busting build id
+ *   node validate-data.js --check-stamp  also fail if index.html carries an old
+ *                                        build id (writes nothing; used by CI)
  *
- * Exits non-zero if anything is wrong, so it works as a pre-commit hook.
+ * Paths are read relative to the folder the command is run from (the repo
+ * root). Exits non-zero if anything is wrong, so it works as a pre-commit hook.
  */
 
 const fs = require('fs');
@@ -21,6 +24,10 @@ const Ranges = require('./js/ranges.js');
 
 const TYPES = ['agl', 'teq', 'str', 'phy', 'int'];
 const DATA_FILES = ['data/lr.json', 'data/dfe.json'];
+
+// Every key a data file may have. Anything else is treated as a typing slip.
+const DATA_KEYS = ['mode', 'label', 'title', 'favicon', 'iconDir', 'idSuffix', 'total',
+  'types', 'eza', 'eza2', 'f2p', 'altArt', 'changelog'];
 
 // Files whose contents decide the cache-busting build id.
 const HASHED_FILES = [
@@ -38,7 +45,9 @@ const HASHED_FILES = [
 const errors = [];
 const warnings = [];
 
+// Records a problem that must be fixed (the run exits 1).
 function error(scope, message) { errors.push(`${scope}: ${message}`); }
+// Records something worth a look that does not fail the run.
 function warn(scope, message) { warnings.push(`${scope}: ${message}`); }
 
 // Parses a range string with the same code the site uses (js/ranges.js), and
@@ -49,9 +58,32 @@ function parseRanges(rangeString, scope, field) {
   });
 }
 
+// Shortens a long list of numbers for a message: the first few, then a count.
 function summarise(numbers, limit = 12) {
   const shown = numbers.slice(0, limit).join(', ');
-  return numbers.length > limit ? `${shown} … (${numbers.length} total)` : shown;
+  return numbers.length > limit ? `${shown} ... (${numbers.length} total)` : shown;
+}
+
+// Parses one id list field (eza, eza2, f2p) and applies the rules they share:
+// it must be a range string, no id may appear twice, and every id must be
+// within 1..total. Returns the ids as a Set.
+function checkIdList(scope, field, value, total) {
+  if (typeof value !== 'string') {
+    error(scope, `${field} must be a range string, e.g. "1-3, 7, 10-12"`);
+    return new Set();
+  }
+  const seen = new Set();
+  const repeated = new Set();
+  for (const id of parseRanges(value, scope, field)) {
+    if (seen.has(id)) repeated.add(id);
+    seen.add(id);
+  }
+  if (repeated.size) {
+    error(scope, `${field} lists ${summarise([...repeated].sort((a, b) => a - b))} more than once`);
+  }
+  const outside = [...seen].filter(id => id < 1 || id > total).sort((a, b) => a - b);
+  if (outside.length) error(scope, `${field} lists ${summarise(outside)}, outside 1-${total}`);
+  return seen;
 }
 
 // Shared layer images every tile is built from (original game file names).
@@ -177,6 +209,9 @@ function checkLayered(scope, file, iconDir, total, altArt) {
   }
 }
 
+// Checks one data file (data/lr.json or data/dfe.json) and everything that
+// hangs off it. Prints a one line summary and returns the parsed data, or null
+// when the file is too broken to check further.
 function checkMode(file) {
   const scope = path.basename(file);
   let data;
@@ -184,8 +219,22 @@ function checkMode(file) {
   try {
     data = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (err) {
-    error(scope, `could not be read as JSON — ${err.message}`);
+    error(scope, `could not be read as JSON - ${err.message}`);
     return null;
+  }
+
+  // --- top level shape ---
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    error(scope, 'must be a JSON object');
+    return null;
+  }
+  for (const key of Object.keys(data)) {
+    if (!DATA_KEYS.includes(key)) error(scope, `unknown field "${key}"`);
+  }
+  const stem = path.basename(file, '.json');
+  if (data.mode !== stem) error(scope, `mode must be "${stem}" to match the file name`);
+  if (data.idSuffix !== undefined && typeof data.idSuffix !== 'string') {
+    error(scope, 'idSuffix must be a string');
   }
 
   const iconDir = data.iconDir;
@@ -194,12 +243,27 @@ function checkMode(file) {
     return null;
   }
 
-  const total = Number(data.total);
+  const total = data.total;
+  if (!Number.isInteger(total) || total < 1) {
+    error(scope, 'total must be a whole number of 1 or more');
+    return null;
+  }
 
   // --- every id has exactly one type ---
+  if (!data.types || typeof data.types !== 'object' || Array.isArray(data.types)) {
+    error(scope, 'types must be an object with the keys ' + TYPES.join(', '));
+    return null;
+  }
+  for (const key of Object.keys(data.types)) {
+    if (!TYPES.includes(key)) error(scope, `types has an unknown key "${key}"`);
+  }
   const typeOf = new Map();
   for (const type of TYPES) {
-    const ids = parseRanges(data.types && data.types[type], scope, `types.${type}`);
+    if (typeof data.types[type] !== 'string') {
+      error(scope, `types.${type} must be a range string`);
+      continue;
+    }
+    const ids = parseRanges(data.types[type], scope, `types.${type}`);
     for (const id of ids) {
       if (typeOf.has(id)) error(scope, `id ${id} is listed as both ${typeOf.get(id)} and ${type}`);
       else typeOf.set(id, type);
@@ -211,42 +275,36 @@ function checkMode(file) {
   for (let i = 1; i <= total; i++) if (!typeOf.has(i)) untyped.push(i);
   if (untyped.length) error(scope, `no type assigned to ${summarise(untyped)}`);
 
-  // --- EZA ranges ---
-  const eza = new Set(parseRanges(data.eza, scope, 'eza'));
-  const eza2 = new Set(parseRanges(data.eza2, scope, 'eza2'));
-
-  for (const [field, set] of [['eza', eza], ['eza2', eza2]]) {
-    const outside = [...set].filter(id => id < 1 || id > total).sort((a, b) => a - b);
-    if (outside.length) error(scope, `${field} lists ${summarise(outside)}, outside 1-${total}`);
-  }
+  // --- EZA lists (eza includes the Super EZA ids, so eza2 must sit inside it) ---
+  const eza = checkIdList(scope, 'eza', data.eza, total);
+  const eza2 = checkIdList(scope, 'eza2', data.eza2, total);
 
   const superOnly = [...eza2].filter(id => !eza.has(id)).sort((a, b) => a - b);
   if (superOnly.length) {
-    warn(scope, `${summarise(superOnly)} are in eza2 but not eza — a Super EZA usually implies an EZA`);
+    error(scope, `${summarise(superOnly)} are in eza2 but not in eza (a Super EZA must also be listed as an EZA)`);
   }
 
   // --- F2P (optional: only modes that declare the key take part) ---
-  let f2pCount = null;
-  if (data.f2p !== undefined) {
-    if (typeof data.f2p !== 'string') {
-      error(scope, 'f2p must be a range string, e.g. "1-3, 7, 10-12"');
-    } else {
-      const ids = parseRanges(data.f2p, scope, 'f2p');
-      const seenF2p = new Set();
-      for (const id of ids) {
-        if (seenF2p.has(id)) error(scope, `f2p lists ${id} more than once`);
-        seenF2p.add(id);
-      }
-      const outside = [...seenF2p].filter(id => id < 1 || id > total).sort((a, b) => a - b);
-      if (outside.length) error(scope, `f2p lists ${summarise(outside)}, outside 1-${total}`);
-      f2pCount = seenF2p.size;
-    }
-  }
+  const f2pCount = data.f2p === undefined ? null : checkIdList(scope, 'f2p', data.f2p, total).size;
 
   // --- alt art ---
+  if (data.altArt !== undefined && !Array.isArray(data.altArt)) {
+    error(scope, 'altArt must be an array of unit numbers, e.g. [14, 18]');
+  }
   const altArt = Array.isArray(data.altArt) ? data.altArt : [];
+  const seenAlt = new Set();
   for (const id of altArt) {
+    if (!Number.isInteger(id)) { error(scope, `altArt entry ${JSON.stringify(id)} is not a whole number`); continue; }
+    if (seenAlt.has(id)) error(scope, `altArt lists ${id} more than once`);
+    seenAlt.add(id);
     if (id < 1 || id > total) error(scope, `altArt lists ${id}, outside 1-${total}`);
+  }
+
+  // --- changelog ---
+  if (!Array.isArray(data.changelog)) {
+    error(scope, 'changelog must be an array of text lines');
+  } else if (data.changelog.some(line => typeof line !== 'string' || !line.trim())) {
+    error(scope, 'changelog lines must be non-empty text');
   }
 
   // --- raw thumbs (one per id, alt art in step with altArt) and the units file ---
@@ -254,7 +312,7 @@ function checkMode(file) {
 
   // --- required text fields ---
   for (const field of ['label', 'title', 'favicon', 'iconDir']) {
-    if (!data[field]) error(scope, `missing "${field}"`);
+    if (typeof data[field] !== 'string' || !data[field].trim()) error(scope, `missing "${field}"`);
   }
   if (data.favicon && !fs.existsSync(data.favicon)) {
     error(scope, `favicon "${data.favicon}" does not exist`);
@@ -272,16 +330,27 @@ function checkMode(file) {
   return data;
 }
 
-function stampBuildId() {
+// Works out the build id: the first 8 hex characters of a SHA-256 over the
+// hashed files. Line endings are normalised to LF first, so a Windows checkout
+// (CRLF) and the CI checkout (LF) arrive at the same id. Returns null, after
+// recording an error, when a hashed file is missing.
+function computeBuildId() {
   const hash = crypto.createHash('sha256');
   for (const file of HASHED_FILES) {
     if (!fs.existsSync(file)) {
       error('stamp', `${file} is missing, cannot compute the build id`);
-      return;
+      return null;
     }
-    hash.update(fs.readFileSync(file));
+    hash.update(fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n'));
   }
-  const build = hash.digest('hex').slice(0, 8);
+  return hash.digest('hex').slice(0, 8);
+}
+
+// --stamp: writes the current build id into every ?v= and data-build in
+// index.html.
+function stampBuildId() {
+  const build = computeBuildId();
+  if (!build) return;
 
   const indexPath = 'index.html';
   const before = fs.readFileSync(indexPath, 'utf8');
@@ -297,6 +366,26 @@ function stampBuildId() {
   console.log(`\nStamped build id ${build} into ${indexPath}`);
 }
 
+// --check-stamp: fails when index.html does not carry the current build id
+// everywhere. Writes nothing.
+function checkBuildId() {
+  const build = computeBuildId();
+  if (!build) return;
+
+  const html = fs.readFileSync('index.html', 'utf8');
+  const found = new Set();
+  for (const match of html.matchAll(/\?v=([^"']*)/g)) found.add(match[1]);
+  const body = /data-build="([^"]*)"/.exec(html);
+  found.add(body ? body[1] : '(no data-build attribute)');
+
+  const stale = [...found].filter(value => value !== build);
+  if (stale.length) {
+    error('stamp', `index.html carries build id ${stale.join(', ')} but the files hash to ${build} - run "node validate-data.js --stamp"`);
+  } else {
+    console.log(`\nBuild id is current: ${build}`);
+  }
+}
+
 // --- run ---
 
 console.log('Dokkan Checklist - data validation\n');
@@ -308,7 +397,12 @@ for (const file of DATA_FILES) {
 
 checkLayers();
 
-if (process.argv.includes('--stamp')) stampBuildId();
+// Never stamp over a failed validation: the stamp is what publishes the data.
+if (process.argv.includes('--stamp')) {
+  if (errors.length) console.log('\nNot stamping: fix the errors below first.');
+  else stampBuildId();
+}
+if (process.argv.includes('--check-stamp')) checkBuildId();
 
 if (warnings.length) {
   console.log('\nWarnings:');

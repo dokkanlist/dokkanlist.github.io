@@ -6,6 +6,8 @@
   "scripts": {
     "validate": "node validate-data.js",
     "stamp": "node validate-data.js --stamp",
-    "test": "node --test"
+    "check": "node validate-data.js --check-stamp",
+    "test": "node --test",
+    "hooks": "git config core.hooksPath .githooks"
   }
 }
