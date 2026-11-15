@@ -87,22 +87,30 @@ max-width:var(--content-max);
 margin:10px auto 0;
 }
 
+/* Side items in a window header (Download button, hints, the import
+   warning), in a row on the left. They wrap within their column rather
+   than run into the centred title. */
+.modal-header-side {
+grid-column:1;
+grid-row:1;
+justify-self:start;
+display:flex;
+flex-wrap:wrap;
+align-items:center;
+gap:4px 10px;
+min-width:0;
+padding:4px 0;
+}
+
+.modal-header-side p {
+margin:0;
+color:#6ee8fd;
+font-size:12px;
+text-align:left;
+}
+
 #image-download {
-position:absolute;
-left:4px;
-top:4px;
-}
-
-.modal-header p {
-position: absolute;
-top: 0;
-left: 5px;
-color: #6ee8fd;
-font-size: 12px;
-}
-
-#image-modal .modal-header p {
-left: 140px;
+margin:0;
 }
 
 .modal {
@@ -152,9 +160,17 @@ border-bottom-right-radius: .5rem;
 background-color:#32586f;
 }
 
+/* A window's header: three columns, so the title stays centred whatever
+   sits beside it - side items left, title in the middle, close button
+   right. Everything is centred vertically on one line. */
 .modal-header {
+display:grid;
+grid-template-columns:1fr auto 1fr;
+align-items:center;
+column-gap:10px;
+min-height:40px;
+padding:0 8px;
 background:#030214;
-height:40px;
 position:relative;
 margin:auto;
 border:2px solid #2c4273;
@@ -163,32 +179,51 @@ border-top-right-radius: .5rem;
 }
 
 .modal-text {
+grid-column:2;
+grid-row:1;
 color:#eee;
-line-height:40px;
+line-height:1.2;
 font-weight:500;
 font-size:large;
 }
 
-.close-btn {
-position:absolute;
-top:7px;
-right:5px;
-width:1.5rem;
-height:1.5rem;
-text-align:center;
+/* The header close button: a square with the cross drawn as a small icon,
+   so it sits exactly in the middle (a text "x" glyph never quite does).
+   Scoped to the header: the Cancel buttons also carry .close-btn, only so
+   the window code can find them, and keep their own look. */
+.modal-header .close-btn {
+grid-column:3;
+grid-row:1;
+justify-self:end;
+display:grid;
+place-items:center;
+width:26px;
+height:26px;
+margin:0;
+padding:0;
 cursor:pointer;
 border-radius:.25rem;
 background-color:#4d0303;
-color:red;
+color:#ff4d4d;
 border:1px solid red;
 }
 
-.close-btn:hover {
+.modal-header .close-btn svg {
+display:block;
+width:12px;
+height:12px;
+fill:none;
+stroke:currentColor;
+stroke-width:2;
+stroke-linecap:round;
+}
+
+.modal-header .close-btn:hover {
 background-color:red;
 color:#4d0303;
 }
 
-.close-btn:active {
+.modal-header .close-btn:active {
 transform: scale(0.95);
 }
 
@@ -756,7 +791,7 @@ background: #11081b;
 padding: 5px;
 border: 2px solid #ac5ece;
 border-radius:7px;
-margin-top:5px;
+margin:4px 0;
 }
 
 #changelog {
@@ -1277,6 +1312,32 @@ font-weight: 700;
   /* The extras wrap here, and a divider could be left at a line's end. */
   .c-sep {
     display: none;
+  }
+}
+
+
+/* Narrow screens: no room for three columns, so the title sits left with
+   the close button on the first line and the side items go underneath. */
+@media only screen and (max-width: 600px) {
+  .modal-header {
+    grid-template-columns: 1fr auto;
+    row-gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .modal-text {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .modal-header .close-btn {
+    grid-column: 2;
+  }
+
+  .modal-header-side {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: wrap;
   }
 }
 

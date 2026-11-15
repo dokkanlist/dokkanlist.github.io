@@ -926,8 +926,12 @@ async function generateImage() {
     const image = new Image();
     image.src = dataUrl;
     image.alt = 'Checklist export';
+    // Shown at the grid's on-screen width, with the height following the
+    // picture's own shape. (The capture can lay the grid out wider than the
+    // screen, on phones in particular, so forcing both sizes squashed it.)
     image.style.width = iconContainer.offsetWidth + 'px';
-    image.style.height = iconContainer.offsetHeight + 'px';
+    image.style.maxWidth = '100%';
+    image.style.height = 'auto';
     box.appendChild(image);
   } catch (err) {
     console.error('Image generation failed:', err);
