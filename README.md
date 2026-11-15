@@ -137,9 +137,6 @@ exits non-zero if anything is wrong. `--stamp` also refreshes the cache-busting
 build id in `index.html`, so returning visitors get the new CSS/JS instead of a
 stale cached copy - run it whenever you change `css/`, `js/`, or `data/`.
 
-The finished icons in `images/lr/icons/` and `images/dfe/icons/` are the old
-one-image-per-character versions. The site no longer loads them.
-
 The same commands are available as npm scripts (nothing to install, there are
 no dependencies):
 
