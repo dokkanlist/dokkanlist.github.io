@@ -231,7 +231,7 @@ let buildId = '';
 // Turns one side's two files into the lookups the page uses.
 //   raw    data/<mode>.json: texts, plus the lists kept by hand (f2p, altArt)
 //   units  data/<mode>.units.json: one entry per unit number, holding its
-//          type, class, EZA state ("eza" or "super", absent for none) and
+//          type, class, EZA state (1 = EZA, 2 = Super EZA, absent for none) and
 //          thumb placement
 // The number of units is simply the number of entries in the units file.
 function normaliseData(raw, units) {
@@ -242,8 +242,8 @@ function normaliseData(raw, units) {
     const id = Number(key);
     if (TYPES.includes(unit.type)) typeOf.set(id, unit.type);
     // A Super EZA is also an EZA, so it goes in both sets.
-    if (unit.eza === 'eza' || unit.eza === 'super') eza.add(id);
-    if (unit.eza === 'super') eza2.add(id);
+    if (unit.eza === 1 || unit.eza === 2) eza.add(id);
+    if (unit.eza === 2) eza2.add(id);
   }
   return {
     label: raw.label,

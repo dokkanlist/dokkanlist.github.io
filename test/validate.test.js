@@ -51,8 +51,8 @@ function sideData(mode) {
 // one with neither. `base` keeps game ids unique between the two sides.
 function sideUnits(base) {
   return {
-    1: { id: base + 1, type: 'agl', class: 'super', eza: 'super', tx: 0, ty: 0 },
-    2: { id: base + 2, type: 'teq', class: 'extreme', eza: 'eza', tx: -1, ty: 1, alt: { id: base + 9, tx: 0, ty: 0 } },
+    1: { id: base + 1, type: 'agl', class: 'super', eza: 2, tx: 0, ty: 0 },
+    2: { id: base + 2, type: 'teq', class: 'extreme', eza: 1, tx: -1, ty: 1, alt: { id: base + 9, tx: 0, ty: 0 } },
     3: { id: base + 3, type: 'str', class: 'super', tx: 6, ty: -4 }
   };
 }
@@ -147,7 +147,8 @@ rejects('a unit key that is not a number', /keys must be 1 to 3; found "x"/, s =
 rejects('a unit with no type', /unit 3: type must be one of agl, teq, str, phy, int/, s => { delete s.lrUnits[3].type; });
 rejects('a misspelt type', /unit 1: type must be one of/, s => { s.lrUnits[1].type = 'fire'; });
 rejects('a bad class', /unit 1: class must be one of super, extreme/, s => { s.lrUnits[1].class = 'hyper'; });
-rejects('a bad eza value', /unit 1: eza must be "eza" or "super"/, s => { s.lrUnits[1].eza = true; });
+rejects('a bad eza value', /unit 1: eza must be 1 \(EZA\) or 2 \(Super EZA\)/, s => { s.lrUnits[1].eza = 3; });
+rejects('an eza written as a word', /unit 1: eza must be 1 \(EZA\) or 2 \(Super EZA\)/, s => { s.lrUnits[1].eza = 'super'; });
 rejects('a decimal thumb offset', /unit 1: tx must be a whole number/, s => { s.lrUnits[1].tx = 0.5; });
 rejects('a duplicate game id', /id 1000001 is already used by unit 1/, s => { s.lrUnits[3].id = 1000001; });
 rejects('an unknown units field', /unit 1: unknown field "name"/, s => { s.lrUnits[1].name = 'x'; });

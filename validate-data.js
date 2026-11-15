@@ -104,8 +104,9 @@ const LAYER_FILES = [
   'cha_rare_ur.png'
 ];
 const CLASSES = ['super', 'extreme'];
-// "eza" is left out of a unit's line when it has no EZA.
-const EZA_STATES = ['eza', 'super'];
+// A unit's "eza": 1 = EZA, 2 = Super EZA. Left out when it has no EZA.
+const EZA_STATES = [1, 2];
+const SUPER_EZA = 2;
 const UNIT_KEYS = ['id', 'type', 'class', 'eza', 'tx', 'ty', 'alt'];
 const ALT_KEYS = ['id', 'tx', 'ty'];
 // Thumb offsets are small nudges in pixels; anything larger is a typing slip.
@@ -181,7 +182,7 @@ function checkUnits(unitsFile, altArt) {
     if (!TYPES.includes(unit.type)) error(scope, `${label}: type must be one of ${TYPES.join(', ')}`);
     if (!CLASSES.includes(unit.class)) error(scope, `${label}: class must be one of ${CLASSES.join(', ')}`);
     if (unit.eza !== undefined && !EZA_STATES.includes(unit.eza)) {
-      error(scope, `${label}: eza must be "eza" or "super", or left out for no EZA`);
+      error(scope, `${label}: eza must be 1 (EZA) or 2 (Super EZA), or left out for no EZA`);
     }
     checkPlacement(scope, label, unit, seenIds);
 
@@ -308,7 +309,7 @@ function checkMode(file) {
   const list = Object.values(units).filter(unit => unit && typeof unit === 'object');
   const counts = TYPES.map(type => `${type.toUpperCase()} ${list.filter(unit => unit.type === type).length}`).join('  ');
   const ezaCount = list.filter(unit => EZA_STATES.includes(unit.eza)).length;
-  const superCount = list.filter(unit => unit.eza === 'super').length;
+  const superCount = list.filter(unit => unit.eza === SUPER_EZA).length;
   const f2pNote = f2pCount === null ? '' : `   F2P ${String(f2pCount).padStart(3)}`;
   console.log(`${scope.padEnd(9)} total ${String(total).padStart(3)}   ` +
     `EZA ${String(ezaCount).padStart(3)}   Super ${String(superCount).padStart(2)}${f2pNote}   ${counts}`);

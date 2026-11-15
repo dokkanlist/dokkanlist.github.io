@@ -1,0 +1,13 @@
+{
+  "about": "Game card ids that tools/update-units.js should never mention or propose. Add an id here when a card keeps showing up in the notes and does not belong on the checklist.",
+  "ids": [
+    1031771,
+    1031781,
+    1031791,
+    1031801,
+    1031811
+  ],
+  "why": {
+    "1031771-1031811": "UR Goku Black (Super Saiyan Rose) (Clone) alt art cards: neither LR nor DFE"
+  }
+}

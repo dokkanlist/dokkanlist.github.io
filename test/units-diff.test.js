@@ -28,11 +28,11 @@ function card(id, rarity, element, tag, step, name, date) {
 function units() {
   return {
     lr: {
-      1: { id: 1000011, type: 'agl', class: 'super', eza: 'eza', tx: -1, ty: 1 },
+      1: { id: 1000011, type: 'agl', class: 'super', eza: 1, tx: -1, ty: 1 },
       2: { id: 1000021, type: 'teq', class: 'extreme', tx: -1, ty: 1 }
     },
     dfe: {
-      1: { id: 2000011, type: 'str', class: 'super', eza: 'eza', tx: 6, ty: -4 },
+      1: { id: 2000011, type: 'str', class: 'super', eza: 1, tx: 6, ty: -4 },
       2: { id: 2000021, type: 'phy', class: 'extreme', tx: 6, ty: -4 }
     }
   };
@@ -70,11 +70,11 @@ function jpCards() {
 test('decodeCard reads type, class and EZA state', () => {
   assert.deepEqual(
     diff.decodeCard(card(1, 5, 24, 0, 4, ' Some\nName ', '2024-01-01')),
-    { id: 1, rarity: 5, tag: 0, type: 'phy', class: 'extreme', eza: 'super', name: 'Some Name', title: 'Title of Some Name', released: '2024-01-01' }
+    { id: 1, rarity: 5, tag: 0, type: 'phy', class: 'extreme', eza: 2, name: 'Some Name', title: 'Title of Some Name', released: '2024-01-01' }
   );
-  assert.equal(diff.decodeCard(card(1, 4, 12, 1, 7, 'x', null)).eza, 'eza');
-  assert.equal(diff.decodeCard(card(1, 4, 12, 1, 8, 'x', null)).eza, 'super');
-  assert.equal(diff.decodeCard(card(1, 5, 12, 0, 0, 'x', null)).eza, 'none');
+  assert.equal(diff.decodeCard(card(1, 4, 12, 1, 7, 'x', null)).eza, 1);
+  assert.equal(diff.decodeCard(card(1, 4, 12, 1, 8, 'x', null)).eza, 2);
+  assert.equal(diff.decodeCard(card(1, 5, 12, 0, 0, 'x', null)).eza, 0);
 });
 
 test('decodeCard returns null for anything it does not recognise', () => {
@@ -97,8 +97,8 @@ test('sideOf puts every LR on the LR side and only festival URs on the DFE side'
 test('buildProposal numbers new units on from the last one, in JP release order', () => {
   const proposal = diff.buildProposal({ units: units(), globalCards: globalCards(), jpCards: jpCards() });
   assert.deepEqual(proposal.lr.newUnits.map(u => [u.number, u.id, u.name, u.type, u.class, u.eza, u.tx, u.ty]), [
-    [3, 1000031, 'New LR Earlier', 'str', 'extreme', 'none', -1, 1],
-    [4, 1000041, 'New LR Later', 'int', 'super', 'none', -1, 1]
+    [3, 1000031, 'New LR Earlier', 'str', 'extreme', 0, -1, 1],
+    [4, 1000041, 'New LR Later', 'int', 'super', 0, -1, 1]
   ]);
   assert.deepEqual(proposal.dfe.newUnits.map(u => [u.number, u.id, u.type, u.class, u.tx, u.ty]), [
     [3, 2000031, 'phy', 'super', 6, -4]
@@ -107,8 +107,8 @@ test('buildProposal numbers new units on from the last one, in JP release order'
 
 test('buildProposal reports EZA changes and writes the changelog lines', () => {
   const proposal = diff.buildProposal({ units: units(), globalCards: globalCards(), jpCards: jpCards() });
-  assert.deepEqual(proposal.lr.ezaChanges, [{ number: 2, name: 'Known LR Two', type: 'teq', from: 'none', to: 'eza' }]);
-  assert.deepEqual(proposal.dfe.ezaChanges, [{ number: 1, name: 'Known DFE One', type: 'str', from: 'eza', to: 'super' }]);
+  assert.deepEqual(proposal.lr.ezaChanges, [{ number: 2, name: 'Known LR Two', type: 'teq', from: 0, to: 1 }]);
+  assert.deepEqual(proposal.dfe.ezaChanges, [{ number: 1, name: 'Known DFE One', type: 'str', from: 1, to: 2 }]);
   assert.deepEqual(proposal.lr.changelog, ['STR New LR Earlier', 'INT New LR Later', 'TEQ Known LR Two EZA']);
   assert.deepEqual(proposal.dfe.changelog, ['PHY New DFE', 'STR Known DFE One Super EZA']);
 });
@@ -122,6 +122,23 @@ test('buildProposal notes free to play hints, alt art and type mismatches withou
   assert.match(notes, /Possible alt art: "Alt Art LR"/);
   assert.match(notes, /LR 1 "Known LR One" is AGL here but TEQ in the catalogue/);
   assert.equal(proposal.lr.newUnits.some(u => u.id === 1000051), false);
+});
+
+test('buildProposal stays silent about ignored ids', () => {
+  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards(), jpCards: jpCards(), ignoreIds: [1000051, 1000041] });
+  assert.doesNotMatch(proposal.notes.join('\n'), /Alt Art LR/);
+  assert.deepEqual(proposal.lr.newUnits.map(u => u.id), [1000031]);
+});
+
+test('mergeRecent updates EZA steps from the latest cards, or asks for the full catalogue', () => {
+  const saved = globalCards();
+  const merged = diff.mergeRecent(saved, [{ id: 1000021, optimal_awakening_step: 4 }, { id: 2000021, optimal_awakening_step: 0 }]);
+  assert.equal(merged.updated, 1);
+  assert.equal(merged.cards.find(c => c.id === 1000021).optimal_awakening_step, 4);
+  assert.equal(saved.find(c => c.id === 1000021).optimal_awakening_step, 3, 'the saved list itself is not modified');
+  assert.equal(diff.mergeRecent(saved, [{ id: 1000021, optimal_awakening_step: 3 }, { id: 9999991, optimal_awakening_step: 0 }]), null);
+  assert.equal(diff.mergeRecent(saved, []), null);
+  assert.equal(diff.mergeRecent(saved, { error: 'not a list' }), null);
 });
 
 test('buildProposal is empty when the checklist already matches', () => {
@@ -159,8 +176,8 @@ test('applyToUnits and formatUnits produce one tidy line per unit', () => {
   const text = diff.formatUnits(diff.applyToUnits(units().lr, proposal.lr));
   assert.equal(text,
     '{\n' +
-    '  "1": {"id": 1000011, "type": "agl", "class": "super", "eza": "eza", "tx": -1, "ty": 1},\n' +
-    '  "2": {"id": 1000021, "type": "teq", "class": "extreme", "eza": "eza", "tx": -1, "ty": 1},\n' +
+    '  "1": {"id": 1000011, "type": "agl", "class": "super", "eza": 1, "tx": -1, "ty": 1},\n' +
+    '  "2": {"id": 1000021, "type": "teq", "class": "extreme", "eza": 1, "tx": -1, "ty": 1},\n' +
     '  "3": {"id": 1000031, "type": "str", "class": "extreme", "tx": -1, "ty": 1},\n' +
     '  "4": {"id": 1000041, "type": "int", "class": "super", "tx": -1, "ty": 1}\n' +
     '}\n');
@@ -227,7 +244,7 @@ test('a check writes a proposal and a preview and changes nothing else', t => {
   const { code, out } = run(root, '--offline');
   assert.equal(code, 0, out);
   assert.match(out, /NEW {2}LR 3 {2}extreme STR {2}New LR Earlier/);
-  assert.match(out, /EZA {2}DFE 1 {2}Known DFE One: eza -> super/);
+  assert.match(out, /EZA {2}DFE 1 {2}Known DFE One: EZA -> Super EZA/);
   assert.match(out, /Nothing has been changed/);
 
   const proposal = JSON.parse(fs.readFileSync(path.join(root, 'tools/proposal.json'), 'utf8'));
@@ -255,10 +272,10 @@ test('--apply writes units, thumbs and changelog, and the result validates', t =
 
   const lr = JSON.parse(fs.readFileSync(path.join(root, 'data/lr.units.json'), 'utf8'));
   assert.deepEqual(Object.keys(lr), ['1', '2', '3', '4']);
-  assert.equal(lr[2].eza, 'eza');
+  assert.equal(lr[2].eza, 1);
   assert.equal(lr[3].id, 1000031);
   const dfe = JSON.parse(fs.readFileSync(path.join(root, 'data/dfe.units.json'), 'utf8'));
-  assert.equal(dfe[1].eza, 'super');
+  assert.equal(dfe[1].eza, 2);
   assert.equal(fs.readFileSync(path.join(root, 'images/lr/thumbs/4.png'), 'utf8'), 'thumb');
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, 'data/lr.json'), 'utf8')).changelog,
     ['STR Reworded by hand', 'INT New LR Later', 'TEQ Known LR Two EZA']);

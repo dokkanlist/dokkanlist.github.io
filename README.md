@@ -78,24 +78,29 @@ What the script decides, and how:
 - **Left to you:** the `f2p` and `altArt` lists. Possible alt art and free to
   play units are only mentioned in the proposal's notes.
 
-It reads dokkandb's JSON API (one small request, then the catalogue only when
-their data has changed) and one thumb per new unit from dokkaninfo.com, one
-request at a time with a pause between them, and keeps a copy in
-`tools/.cache/`. If a site refuses, the script stops and says so; it does not
+It keeps its requests small. One request asks dokkandb whether its data has
+changed. If it has, one more reads dokkandb's short list of latest cards, and
+the saved catalogue in `tools/.cache/` is reused when it already knows every
+card on that list. The whole catalogue is downloaded only when a card it has
+never seen is listed, or once the saved copy is over 30 days old. One thumb
+per new unit comes from dokkaninfo.com. Requests go one at a time with a pause
+between them.
+
+Cards the script should never mention go in `tools/ignore-ids.json`. If a site refuses, the script stops and says so; it does not
 try to get around it. `--offline` works from the saved copy and `--refresh`
-ignores it.
+checks against the whole catalogue again.
 
 ### A unit line
 
 ```
-"196": {"id": 1034591, "type": "agl", "class": "super", "eza": "eza", "tx": -1, "ty": 1},
+"196": {"id": 1034591, "type": "agl", "class": "super", "eza": 1, "tx": -1, "ty": 1},
 ```
 
 - The key is your own unit number. Keys must run from 1 with no gaps.
 - `id` is the game's card id (7 digits).
 - `type` is `agl`, `teq`, `str`, `phy` or `int` and picks the frame colour.
 - `class` is `super` or `extreme` and picks the class + type badge.
-- `eza` is `eza` or `super` (Super EZA). Leave it out for a unit with no EZA.
+- `eza` is `1` for an EZA or `2` for a Super EZA. Leave it out for a unit with no EZA.
 - `tx` / `ty` place the thumb, in pixels of the original icon canvas. DFE
   units always use `6, -4`. LR units usually use `-1, 1`; nudge by a pixel or
   two if the art sits off-centre in its frame.
@@ -121,8 +126,8 @@ The update script above normally does this. The manual steps are:
    node validate-data.js --stamp
    ```
 
-An EZA or Super EZA is a one word edit: set `"eza": "eza"` or
-`"eza": "super"` on the unit's line.
+An EZA or Super EZA is a one number edit: set `"eza": 1` or `"eza": 2` on the
+unit's line.
 
 `validate-data.js` checks that the unit numbers run from 1 with no gaps, that
 every unit has a valid type, class and EZA state and a thumb file, that the

@@ -9,7 +9,7 @@
  *
  *   node tools/update-units.js            check, write a proposal to review
  *   node tools/update-units.js --apply    apply the proposal you reviewed
- *   node tools/update-units.js --refresh  check again, ignoring the saved copy
+ *   node tools/update-units.js --refresh  check against the whole catalogue again
  *   node tools/update-units.js --offline  check using only the saved copy
  *
  * A check writes two files, both ignored by git:
@@ -21,8 +21,11 @@
  * look at `git diff`, then commit yourself.
  *
  * What it reads from the internet (run from the repo root):
- *   dokkandb's JSON API     the card catalogue: 1 small request, then up to 6
- *                           more only when their data has changed
+ *   dokkandb's JSON API     1 small request to see whether their data has
+ *                           changed; if so, 1 more for the latest cards. The
+ *                           whole catalogue (about 4 requests) is fetched only
+ *                           when a card it has never seen is listed, or once
+ *                           the saved copy is over 30 days old
  *   dokkaninfo.com          one thumb image per NEW unit
  * Requests go one at a time with a pause between them. The script does not
  * try to get around a refusal; if a site says no, it stops and tells you.
@@ -61,6 +64,10 @@ const CACHE = path.join(TOOLS, '.cache');
 const THUMB_CACHE = path.join(CACHE, 'thumbs');
 const PROPOSAL_FILE = path.join(TOOLS, 'proposal.json');
 const PREVIEW_FILE = path.join(TOOLS, 'preview.html');
+// Game ids the check should stay silent about (kept by hand, tracked in git).
+const IGNORE_FILE = path.join(TOOLS, 'ignore-ids.json');
+// The saved catalogue is trusted for this long before a full download.
+const FULL_CHECK_DAYS = 30;
 
 /* --- Small helpers ---------------------------------------- */
 
@@ -170,11 +177,30 @@ async function loadCatalogues({ refresh, offline }) {
     return { global: readJson(files.global), jp: readJson(files.jp) };
   }
 
-  console.log(`  Data version ${versions.database}. Downloading the catalogue...`);
+  console.log(`  Data version ${versions.database} (saved copy is ${saved.database || 'missing'}).`);
+
+  // The data changed. Usually that is a handful of new cards and EZAs, all of
+  // which dokkandb lists as its latest cards, so look at that short list
+  // first and keep the saved catalogue if it already knows every card on it.
+  const ageDays = saved.fullAt ? (Date.now() - Date.parse(saved.fullAt)) / 86400000 : Infinity;
+  if (haveCopy && !refresh && ageDays < FULL_CHECK_DAYS) {
+    await pause(DELAY_MS);
+    const recent = await getJson(`${API.global}/recent-cards`);
+    const merged = diff.mergeRecent(readJson(files.global), recent);
+    if (merged) {
+      console.log(`  Checked the ${recent.length} latest cards only: all already known, ${merged.updated} EZA update(s).`);
+      writeText(files.global, JSON.stringify(merged.cards));
+      writeText(versionFile, JSON.stringify(Object.assign({}, versions, { fullAt: saved.fullAt }), null, 2));
+      return { global: merged.cards, jp: readJson(files.jp) };
+    }
+    console.log('  The latest cards include one not seen before.');
+  }
+
+  console.log('  Downloading the whole catalogue...');
   const catalogues = { global: await fetchCatalogue('global'), jp: await fetchCatalogue('jp') };
   writeText(files.global, JSON.stringify(catalogues.global));
   writeText(files.jp, JSON.stringify(catalogues.jp));
-  writeText(versionFile, JSON.stringify(versions, null, 2));
+  writeText(versionFile, JSON.stringify(Object.assign({}, versions, { fullAt: new Date().toISOString() }), null, 2));
   return catalogues;
 }
 
@@ -236,8 +262,8 @@ function tileHtml(side, unit, thumbSrc) {
   const classDigit = unit.class === 'super' ? 1 : 2;
   const badge = side === 'lr' ? 'cha_rare_lr.png' : 'cha_rare_ur.png';
   const classes = ['flair', 'selected', `type-${unit.type}`];
-  if (unit.eza === 'eza' || unit.eza === 'super') classes.push('eza');
-  if (unit.eza === 'super') classes.push('eza2');
+  if (unit.eza === 1 || unit.eza === 2) classes.push('eza');
+  if (unit.eza === 2) classes.push('eza2');
   return `<div class="${classes.join(' ')}">` +
     `<img class="layer layer-frame" alt="" src="../images/layers/cha_base_0${typeIndex}_04.png">` +
     `<img class="layer layer-thumb" alt="" src="${esc(thumbSrc)}" style="--tx:${unit.tx};--ty:${unit.ty}">` +
@@ -255,12 +281,12 @@ function writePreview(proposal, units) {
     for (const unit of part.newUnits) {
       const thumb = path.relative(TOOLS, cachedThumb(unit.id)).replace(/\\/g, '/');
       cards.push(`<div class="card">${tileHtml(side, unit, thumb)}<p><b>New: ${SIDE_LABEL[side]} ${unit.number}</b><br>` +
-        `${esc(unit.name)}<br><i>${esc(unit.title)}</i><br>${unit.class} ${unit.type.toUpperCase()}, EZA: ${unit.eza}<br>game id ${unit.id}</p></div>`);
+        `${esc(unit.name)}<br><i>${esc(unit.title)}</i><br>${unit.class} ${unit.type.toUpperCase()}, EZA: ${ezaWord(unit.eza)}<br>game id ${unit.id}</p></div>`);
     }
     for (const change of part.ezaChanges) {
       const unit = Object.assign({}, units[side][change.number], { eza: change.to });
       cards.push(`<div class="card">${tileHtml(side, unit, `../images/${side}/thumbs/${change.number}.png`)}` +
-        `<p><b>${SIDE_LABEL[side]} ${change.number}</b><br>${esc(change.name)}<br>EZA: ${change.from} -> ${change.to}</p></div>`);
+        `<p><b>${SIDE_LABEL[side]} ${change.number}</b><br>${esc(change.name)}<br>EZA: ${ezaWord(change.from)} -> ${ezaWord(change.to)}</p></div>`);
     }
     const changelog = part.changelog.length
       ? `<p class="log"><b>Changelog would become:</b><br>${part.changelog.map(esc).join('<br>')}</p>` : '';
@@ -301,6 +327,11 @@ ${notes}
 
 /* --- Check: build the proposal ---------------------------- */
 
+// The EZA state number as a word, for reports: 0 none, 1 EZA, 2 Super EZA.
+function ezaWord(state) {
+  return diff.EZA_WORDS[state] || String(state);
+}
+
 // Prints the proposal as a short report.
 function report(proposal) {
   for (const side of SIDES) {
@@ -308,10 +339,10 @@ function report(proposal) {
     console.log(`\n${SIDE_LABEL[side]} side`);
     if (!part.newUnits.length && !part.ezaChanges.length) console.log('  no changes');
     for (const unit of part.newUnits) {
-      console.log(`  NEW  ${SIDE_LABEL[side]} ${unit.number}  ${unit.class} ${unit.type.toUpperCase()}  ${unit.name} - ${unit.title}  (game id ${unit.id}, EZA: ${unit.eza})`);
+      console.log(`  NEW  ${SIDE_LABEL[side]} ${unit.number}  ${unit.class} ${unit.type.toUpperCase()}  ${unit.name} - ${unit.title}  (game id ${unit.id}, EZA: ${ezaWord(unit.eza)})`);
     }
     for (const change of part.ezaChanges) {
-      console.log(`  EZA  ${SIDE_LABEL[side]} ${change.number}  ${change.name}: ${change.from} -> ${change.to}`);
+      console.log(`  EZA  ${SIDE_LABEL[side]} ${change.number}  ${change.name}: ${ezaWord(change.from)} -> ${ezaWord(change.to)}`);
     }
   }
   if (proposal.notes.length) {
@@ -324,7 +355,8 @@ function report(proposal) {
 async function check(options) {
   const units = readUnits();
   const catalogues = await loadCatalogues(options);
-  const proposal = diff.buildProposal({ units, globalCards: catalogues.global, jpCards: catalogues.jp });
+  const ignoreIds = readJson(IGNORE_FILE, { ids: [] }).ids || [];
+  const proposal = diff.buildProposal({ units, globalCards: catalogues.global, jpCards: catalogues.jp, ignoreIds });
   proposal.generated = new Date().toISOString();
 
   if (diff.isEmpty(proposal)) {
@@ -338,7 +370,7 @@ async function check(options) {
   // "generated" first, then how to use the file, so it reads top to bottom.
   const ordered = {
     generated: proposal.generated,
-    howTo: 'Edit or delete entries, then run: node tools/update-units.js --apply. New unit numbers must carry on from the last unit with no gaps. Changelog lines are yours to reword; an empty changelog list leaves that side\'s changelog alone.',
+    howTo: 'Edit or delete entries, then run: node tools/update-units.js --apply. New unit numbers must carry on from the last unit with no gaps. eza is 0 for none, 1 for EZA, 2 for Super EZA. Changelog lines are yours to reword; an empty changelog list leaves that side\'s changelog alone.',
     lr: proposal.lr,
     dfe: proposal.dfe,
     notes: proposal.notes
@@ -438,7 +470,7 @@ if (args.has('--help') || unknown.length) {
   if (unknown.length) console.error(`Unknown option: ${unknown.join(', ')}\n`);
   console.log('node tools/update-units.js            check dokkandb and write a proposal to review\n' +
     'node tools/update-units.js --apply    apply tools/proposal.json to the site\'s files\n' +
-    'node tools/update-units.js --refresh  check again, ignoring the saved catalogue\n' +
+    'node tools/update-units.js --refresh  check against the whole catalogue again\n' +
     'node tools/update-units.js --offline  check using only the saved catalogue\n' +
     '                           --force    with --apply: allow uncommitted edits in data/');
   process.exit(unknown.length ? 1 : 0);
