@@ -746,14 +746,14 @@ color: #68f75b;
   --canvas: 255;
   --frame-size: 190;  --frame-x: 31;     --frame-y: 41;
   --type-size: 99.7;  --type-x: 160.4;   --type-y: 6.4;
-  --rarity-width: 141; --rarity-x: -20;  --rarity-y: 161;
+  --rarity-width: 146.7; --rarity-x: -23.2; --rarity-y: 159.6;
 }
 
 .dfe {
   --canvas: 263;
-  --frame-size: 203;  --frame-x: 33;     --frame-y: 30;
+  --frame-size: 202.9; --frame-x: 32.05; --frame-y: 30.1;
   --type-size: 104.8; --type-x: 162.4;   --type-y: -0.6;
-  --rarity-width: 177; --rarity-x: -41;  --rarity-y: 150;
+  --rarity-width: 176.8; --rarity-x: -40.8; --rarity-y: 150.1;
 }
 
 /* The flat icon is not used on a layered tile. */
