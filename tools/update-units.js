@@ -24,9 +24,7 @@
  *   dokkandb's JSON API     1 small request to see whether their data has
  *                           changed since the last check. Only if it has:
  *                           the Global card catalogue (2 requests, the same
- *                           ones their homepage makes), and the JP catalogue
- *                           (2 more) only when a new unit needs its release
- *                           order
+ *                           ones their homepage makes)
  *   dokkaninfo.com          one thumb image per NEW unit
  * Requests go one at a time with a pause between them. The script does not
  * try to get around a refusal; if a site says no, it stops and tells you.
@@ -42,9 +40,9 @@ const diff = require('./lib/units-diff.js');
 const SIDES = ['lr', 'dfe'];
 const SIDE_LABEL = { lr: 'LR', dfe: 'DFE' };
 
-// dokkandb's API: Global is the source of truth; JP only supplies the release
-// order that the unit numbers follow.
-const API = { global: 'https://api.dokkandb.com/api', jp: 'https://api.dokkandb.com/jp/api' };
+// dokkandb's API (Global server). Global and JP release on the same dates
+// now, so the unit numbers follow Global release order.
+const API = { global: 'https://api.dokkandb.com/api' };
 const CHUNK_SIZE = 1000;
 const MAX_CHUNKS = 6;
 // Where a unit's raw 250 px thumb comes from. <id0> is the card id with its
@@ -67,10 +65,10 @@ const PROPOSAL_FILE = path.join(TOOLS, 'proposal.json');
 const PREVIEW_FILE = path.join(TOOLS, 'preview.html');
 // Game ids the check should stay silent about (kept by hand, tracked in git).
 const IGNORE_FILE = path.join(TOOLS, 'ignore-ids.json');
-// The saved copy: dokkandb's version stamps at the last check, and the two
-// catalogues as last downloaded.
+// The saved copy: dokkandb's version stamps at the last check, and the
+// catalogue as last downloaded.
 const VERSION_FILE = path.join(CACHE, 'versions.json');
-const CATALOGUE = { global: path.join(CACHE, 'catalogue-global.json'), jp: path.join(CACHE, 'catalogue-jp.json') };
+const CATALOGUE = { global: path.join(CACHE, 'catalogue-global.json') };
 
 /* --- Small helpers ---------------------------------------- */
 
@@ -187,20 +185,6 @@ async function loadGlobalCatalogue({ refresh, offline }) {
   return cards;
 }
 
-// Returns the JP catalogue, which is only used for the release order of new
-// units. The saved copy is reused when it already lists every id in
-// `neededIds`; otherwise it is downloaded (never when offline).
-async function loadJpCatalogue(neededIds, offline) {
-  const saved = readJson(CATALOGUE.jp, []);
-  const have = new Set(saved.map(card => Number(card.id)));
-  if (offline || neededIds.every(id => have.has(id))) return saved;
-
-  console.log('  New unit found. Downloading the JP catalogue for its release order...');
-  const cards = await fetchCatalogue('jp');
-  writeText(CATALOGUE.jp, JSON.stringify(cards));
-  return cards;
-}
-
 // Reads the width and height out of a PNG file's header, or null if the
 // bytes are not a PNG.
 function pngSize(buffer) {
@@ -212,6 +196,13 @@ function pngSize(buffer) {
 // Where a new unit's thumb is kept until the proposal is applied.
 function cachedThumb(id) {
   return path.join(THUMB_CACHE, `${id}.png`);
+}
+
+// True when a file is a THUMB_SIZE x THUMB_SIZE PNG, the only shape the
+// tiles are drawn for.
+function isGoodThumb(file) {
+  const size = pngSize(fs.readFileSync(file));
+  return Boolean(size) && size.width === THUMB_SIZE && size.height === THUMB_SIZE;
 }
 
 // Makes sure the thumb of every new unit is saved locally. Returns a note
@@ -353,12 +344,7 @@ async function check(options) {
   const units = readUnits();
   const globalCards = await loadGlobalCatalogue(options);
   const ignoreIds = readJson(IGNORE_FILE, { ids: [] }).ids || [];
-  // First pass finds what is new; the JP catalogue is then only fetched if a
-  // new unit needs its JP release date, and the proposal is built with it.
-  const firstPass = diff.buildProposal({ units, globalCards, jpCards: [], ignoreIds });
-  const newIds = SIDES.flatMap(side => firstPass[side].newUnits.map(unit => unit.id));
-  const jpCards = newIds.length ? await loadJpCatalogue(newIds, options.offline) : [];
-  const proposal = diff.buildProposal({ units, globalCards, jpCards, ignoreIds });
+  const proposal = diff.buildProposal({ units, globalCards, ignoreIds });
   proposal.generated = new Date().toISOString();
 
   if (diff.isEmpty(proposal)) {
@@ -372,7 +358,7 @@ async function check(options) {
   // "generated" first, then how to use the file, so it reads top to bottom.
   const ordered = {
     generated: proposal.generated,
-    howTo: 'Edit or delete entries, then run: node tools/update-units.js --apply. New unit numbers must carry on from the last unit with no gaps. eza is 0 for none, 1 for EZA, 2 for Super EZA. Changelog lines are yours to reword; an empty changelog list leaves that side\'s changelog alone.',
+    howTo: 'Edit or delete entries, then run: node tools/update-units.js --apply. New unit numbers must carry on from the last unit with no gaps. eza is 0 for none, 1 for EZA, 2 for Super EZA. Changelog lines are yours to reword; an empty changelog list leaves that side\'s changelog alone. Units released on the same day are numbered lower game id first; the notes name them.',
     lr: proposal.lr,
     dfe: proposal.dfe,
     notes: proposal.notes
@@ -387,6 +373,23 @@ async function check(options) {
 
 /* --- Apply ------------------------------------------------ */
 
+// Reads tools/proposal.json, with a plain explanation (not a crash) when it is
+// missing, empty or no longer valid JSON after a hand edit.
+function readProposal() {
+  const name = path.relative('.', PROPOSAL_FILE);
+  if (!fs.existsSync(PROPOSAL_FILE)) fail(`There is no ${name}. Run the check first: node tools/update-units.js`);
+  const text = fs.readFileSync(PROPOSAL_FILE, 'utf8');
+  if (!text.trim()) fail(`${name} is empty. Run the check again to make a new one: node tools/update-units.js`);
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    fail(`${name} is not valid JSON any more, so nothing was changed.\n` +
+      `  ${err.message}\n` +
+      'Usual causes after a hand edit: a comma after the last item in a list, a missing comma, or a missing quote.\n' +
+      'Fix it and apply again, or run the check again to start from a fresh proposal.');
+  }
+}
+
 // True when git reports uncommitted edits to the data folder. Applying on top
 // of those would mix two sets of changes in one diff.
 function dataFolderIsDirty() {
@@ -397,16 +400,19 @@ function dataFolderIsDirty() {
 // --apply: writes the reviewed proposal into the site's files, then runs the
 // validator. If the validator objects, every file is put back as it was.
 function apply(options) {
-  const proposal = readJson(PROPOSAL_FILE, null);
-  if (!proposal) fail(`There is no ${path.relative('.', PROPOSAL_FILE)}. Run the check first: node tools/update-units.js`);
+  const proposal = readProposal();
 
   const units = readUnits();
   const problems = diff.checkProposal(proposal, units);
   for (const side of SIDES) {
-    for (const unit of (proposal[side] && proposal[side].newUnits) || []) {
+    const part = proposal && proposal[side];
+    const newUnits = part && Array.isArray(part.newUnits) ? part.newUnits : [];
+    // Entries checkProposal already rejected (not objects) are skipped here.
+    for (const unit of newUnits.filter(entry => entry && typeof entry === 'object')) {
       const source = cachedThumb(unit.id);
       const target = path.join(sidePaths(side).thumbs, `${unit.number}.png`);
       if (!fs.existsSync(source)) problems.push(`${SIDE_LABEL[side]} ${unit.number}: no thumb at ${path.relative('.', source)}`);
+      else if (!isGoodThumb(source)) problems.push(`${SIDE_LABEL[side]} ${unit.number}: ${path.relative('.', source)} is not a ${THUMB_SIZE} x ${THUMB_SIZE} px PNG. Replace it with the right image`);
       if (fs.existsSync(target)) problems.push(`${SIDE_LABEL[side]} ${unit.number}: ${target} already exists and will not be overwritten`);
     }
   }
@@ -419,33 +425,44 @@ function apply(options) {
   // Remember everything that is about to change, so it can be undone.
   const originals = new Map();
   const created = [];
-  const remember = file => originals.set(file, fs.readFileSync(file));
-  remember('index.html');
+  const remember = file => { if (!originals.has(file)) originals.set(file, fs.readFileSync(file)); };
+  // Puts every remembered file back and removes every file created so far.
+  const undo = () => {
+    for (const [file, content] of originals) fs.writeFileSync(file, content);
+    for (const file of created) if (fs.existsSync(file)) fs.rmSync(file);
+  };
 
-  for (const side of SIDES) {
-    const part = proposal[side];
-    const paths = sidePaths(side);
-    if (!part.newUnits.length && !part.ezaChanges.length) continue;
+  // Any failure from here on, not only a validator rejection, undoes
+  // everything, so a half-applied update is never left behind.
+  try {
+    remember('index.html');
+    for (const side of SIDES) {
+      const part = proposal[side];
+      const paths = sidePaths(side);
+      if (!part.newUnits.length && !part.ezaChanges.length) continue;
 
-    remember(paths.units);
-    fs.writeFileSync(paths.units, diff.formatUnits(diff.applyToUnits(units[side], part)));
+      remember(paths.units);
+      fs.writeFileSync(paths.units, diff.formatUnits(diff.applyToUnits(units[side], part)));
 
-    for (const unit of part.newUnits) {
-      const target = path.join(paths.thumbs, `${unit.number}.png`);
-      fs.copyFileSync(cachedThumb(unit.id), target);
-      created.push(target);
+      for (const unit of part.newUnits) {
+        const target = path.join(paths.thumbs, `${unit.number}.png`);
+        created.push(target);
+        fs.copyFileSync(cachedThumb(unit.id), target);
+      }
+      if (part.changelog.length) {
+        remember(paths.data);
+        fs.writeFileSync(paths.data, diff.replaceChangelog(fs.readFileSync(paths.data, 'utf8'), part.changelog));
+      }
     }
-    if (part.changelog.length) {
-      remember(paths.data);
-      fs.writeFileSync(paths.data, diff.replaceChangelog(fs.readFileSync(paths.data, 'utf8'), part.changelog));
-    }
+  } catch (err) {
+    undo();
+    fail(`Applying stopped part way (${err.message}), so every file was put back as it was. Nothing was changed.`);
   }
 
   console.log('Files written. Running the validator...\n');
   const validator = spawnSync(process.execPath, [VALIDATOR, '--stamp'], { stdio: 'inherit' });
   if (validator.status !== 0) {
-    for (const [file, content] of originals) fs.writeFileSync(file, content);
-    for (const file of created) fs.rmSync(file);
+    undo();
     fail('The validator rejected the result, so every file was put back as it was. Fix the proposal and apply again.');
   }
 

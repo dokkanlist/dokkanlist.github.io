@@ -93,16 +93,26 @@ function changelogLine(type, name, eza) {
   return `${String(type).toUpperCase()} ${name}${suffix}`;
 }
 
+// The calendar day of a release date ("2026-09-29"), or null if unknown.
+// dokkandb's dates carry no time zone, so the day is read straight from the
+// text; going through Date would shift it by the computer's own time zone.
+function releaseDay(value) {
+  const written = String(value == null ? '' : value).match(/^\d{4}-\d{2}-\d{2}/);
+  if (written) return written[0];
+  const time = toTime(value);
+  return time === Number.MAX_SAFE_INTEGER ? null : new Date(time).toISOString().slice(0, 10);
+}
+
 // Compares the catalogue with the units files and describes what should change.
 //   units        { lr: {...}, dfe: {...} }  the current units files
-//   globalCards  raw catalogue records from the Global server (the source of truth)
-//   jpCards      raw catalogue records from the JP server (release order only)
+//   globalCards  raw catalogue records from the Global server
 //   ignoreIds    game ids to stay silent about (tools/ignore-ids.json)
+// New units are numbered in Global release order, lower game id first on the
+// same day. (Global and JP release on the same dates now, so the JP catalogue
+// the numbering was first based on is no longer needed.)
 // Returns { lr: { newUnits, ezaChanges, changelog }, dfe: { ... }, notes: [...] }.
-function buildProposal({ units, globalCards, jpCards, ignoreIds }) {
+function buildProposal({ units, globalCards, ignoreIds }) {
   const ignored = new Set(ignoreIds || []);
-  const jpDate = new Map();
-  for (const card of jpCards || []) jpDate.set(Number(card.id), card.open_at_card);
 
   const decoded = globalCards.map(decodeCard);
   const byId = new Map(decoded.map(card => [card.id, card]));
@@ -123,11 +133,10 @@ function buildProposal({ units, globalCards, jpCards, ignoreIds }) {
     const current = units[side];
     const count = Object.keys(current).length;
 
-    // --- new units, numbered on from the last one in JP release order ---
+    // --- new units, numbered on from the last one in release order ---
     const fresh = decoded
       .filter(card => sideOf(card) === side && !known.has(card.id) && !ignored.has(card.id))
-      .map(card => Object.assign({}, card, { order: toTime(jpDate.has(card.id) ? jpDate.get(card.id) : card.released) }))
-      .sort((a, b) => a.order - b.order || a.id - b.id);
+      .sort((a, b) => toTime(a.released) - toTime(b.released) || a.id - b.id);
 
     const newUnits = [];
     fresh.forEach(card => {
@@ -148,12 +157,27 @@ function buildProposal({ units, globalCards, jpCards, ignoreIds }) {
         ty: DEFAULT_OFFSET[side].ty,
         released: card.released
       };
-      if (!jpDate.has(card.id)) entry.orderNote = 'No JP release date found; ordered by its Global date.';
       newUnits.push(entry);
       if (side === 'lr' && F2P_TAGS.includes(card.tag)) {
         notes.push(`LR ${number} "${card.name}" looks free to play (catalogue tag ${card.tag}). Add ${number} to f2p in data/lr.json if you agree.`);
       }
     });
+
+    // --- same-day releases: numbered lower game id first, pointed out so
+    // the owner can swap them before applying ---
+    const byDay = new Map();
+    for (const unit of newUnits) {
+      const day = releaseDay(unit.released);
+      if (!day) continue;
+      if (!byDay.has(day)) byDay.set(day, []);
+      byDay.get(day).push(unit);
+    }
+    for (const [day, group] of byDay) {
+      if (group.length < 2) continue;
+      const names = group.map(unit => `${side.toUpperCase()} ${unit.number} "${unit.name}"`).join(', ');
+      notes.push(`${names} were released on the same day (${day}) and are numbered lower game id first. ` +
+        'To number them the other way, swap their "number" values in this file (and the changelog order if you like).');
+    }
 
     // --- EZA changes and sanity checks on the units already listed ---
     const ezaChanges = [];
@@ -200,6 +224,11 @@ function isEmpty(proposal) {
   return ['lr', 'dfe'].every(side => !proposal[side].newUnits.length && !proposal[side].ezaChanges.length);
 }
 
+// True for a plain object (not null, not a list, not text).
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 // Checks a proposal (which the owner may have edited) against the current
 // units files. Returns a list of problems; empty means it is safe to apply.
 function checkProposal(proposal, units) {
@@ -213,18 +242,24 @@ function checkProposal(proposal, units) {
   }
 
   for (const side of ['lr', 'dfe']) {
-    const part = proposal && proposal[side];
+    const part = isRecord(proposal) ? proposal[side] : null;
     const label = side.toUpperCase();
-    if (!part || !Array.isArray(part.newUnits) || !Array.isArray(part.ezaChanges) || !Array.isArray(part.changelog)) {
+    if (!isRecord(part) || !Array.isArray(part.newUnits) || !Array.isArray(part.ezaChanges) || !Array.isArray(part.changelog)) {
       problems.push(`${label}: the proposal must have newUnits, ezaChanges and changelog lists`);
       continue;
     }
     const count = Object.keys(units[side]).length;
 
     part.newUnits.forEach((unit, index) => {
-      const where = `${label} new unit ${unit.number}`;
       const expected = count + index + 1;
-      if (unit.number !== expected) {
+      if (!isRecord(unit)) {
+        problems.push(`${label} new unit in place ${index + 1}: must be an entry like the others, not ${JSON.stringify(unit)}`);
+        return;
+      }
+      const where = `${label} new unit ${unit.number}`;
+      if (!Number.isInteger(unit.number)) {
+        problems.push(`${where}: "number" must be a whole number (written without quotes), here ${expected}`);
+      } else if (unit.number !== expected) {
         problems.push(`${where}: numbers must carry on from ${count} with no gaps, so this one should be ${expected}`);
       }
       if (!Number.isInteger(unit.id) || unit.id < 1000000 || unit.id > 9999999) problems.push(`${where}: id must be a 7 digit game card id`);
@@ -238,11 +273,18 @@ function checkProposal(proposal, units) {
       }
     });
 
-    for (const change of part.ezaChanges) {
+    const changed = new Set();
+    part.ezaChanges.forEach((change, index) => {
+      if (!isRecord(change)) {
+        problems.push(`${label} EZA change in place ${index + 1}: must be an entry like the others, not ${JSON.stringify(change)}`);
+        return;
+      }
       const where = `${label} EZA change for unit ${change.number}`;
-      if (!units[side][change.number]) problems.push(`${where}: there is no such unit`);
+      if (!Number.isInteger(change.number) || !units[side][change.number]) problems.push(`${where}: there is no such unit`);
+      else if (changed.has(change.number)) problems.push(`${where}: unit ${change.number} is listed twice; keep one entry`);
+      changed.add(change.number);
       if (!EZA_STATES.includes(change.to)) problems.push(`${where}: "to" must be 0 (none), 1 (EZA) or 2 (Super EZA)`);
-    }
+    });
 
     if (part.changelog.some(line => typeof line !== 'string' || !line.trim())) {
       problems.push(`${label}: changelog lines must be non-empty text`);
@@ -297,6 +339,6 @@ function replaceChangelog(text, lines) {
 
 module.exports = {
   TYPES, DEFAULT_OFFSET, EZA_WORDS,
-  cleanName, toTime, decodeCard, sideOf, changelogLine,
+  cleanName, toTime, releaseDay, decodeCard, sideOf, changelogLine,
   buildProposal, isEmpty, checkProposal, applyToUnits, formatUnits, replaceChangelog
 };

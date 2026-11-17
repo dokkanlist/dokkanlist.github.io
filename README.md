@@ -36,6 +36,40 @@ character's raw 250 px game thumb, a rarity badge and a class + type badge. The
 frames and badges are shared (`images/layers/`), so a new character only needs
 its thumb.
 
+### When new units drop: checklist
+
+The short version. Each step is explained further down.
+
+1. **Start clean.** Commit or undo any unfinished edits in `data/`. Applying
+   refuses to mix an update with other changes.
+2. **Check.** Double-click `Update checklist.bat` in the repo root (kept on
+   this PC only), or run `npm run update`. Nothing is changed by this step.
+3. **Read the notes** at the end of the printout:
+   - *released on the same day*: those units are numbered lower game id
+     first. Swap their `number` values in `tools/proposal.json` if you want
+     them the other way.
+   - *looks free to play*: note the number for step 7.
+   - *possible alt art*: added by hand, see "Adding a character by hand".
+   - *thumb could not be downloaded*: save the 250 x 250 px PNG at the path
+     the note gives.
+4. **Look at the preview.** The launcher opens `tools/preview.html`. Check
+   every new tile (type, class, art sitting well in the frame) and every EZA
+   change.
+5. **Fix anything** in `tools/proposal.json`: a thumb offset (`tx`, `ty`),
+   changelog wording, or an entry you do not want. If you delete a new unit,
+   renumber the ones after it so there are no gaps.
+6. **Apply.** Answer `y` in the launcher, or run `npm run update:apply`. If it
+   refuses, it says exactly why and nothing has been changed: fix
+   `tools/proposal.json` and apply again. If anything fails part way, every
+   file is put back.
+7. **Hand-kept lists.** Add new free to play numbers to `f2p` in
+   `data/lr.json`, and any alt art to `altArt` plus the unit's `alt` field.
+8. **Look at the site** locally (see "Running locally") and at `git diff`.
+9. **Commit and push.** Nothing is committed for you.
+
+To abandon an applied update before committing: `git restore data index.html`,
+then delete the new thumbs that `git status` lists under `images/`.
+
 ### Updating when new units or EZAs are released
 
 `tools/update-units.js` does the routine part. It compares the checklist with
@@ -69,8 +103,9 @@ written to the site's files until you have looked at the proposal.
 What the script decides, and how:
 
 - **New units:** every LR, and every UR tagged Dokkan Festival, whose game id
-  is not on the checklist yet. They are numbered on from your last unit in JP
-  release order, as your existing numbers are.
+  is not on the checklist yet. They are numbered on from your last unit in
+  release order (Global and JP now release on the same dates), lower game id
+  first for units released on the same day.
 - **Type and class:** from the card's `element`.
 - **EZA and Super EZA:** from the card's `optimal_awakening_step`.
 - **Changelog:** one line per new unit (`AGL Name`) and per EZA
@@ -81,8 +116,7 @@ What the script decides, and how:
 It keeps its requests small. One request asks dokkandb whether its data has
 changed since the last check; if not, that is all. If it has, the Global card
 catalogue is downloaded (two requests, the same ones dokkandb's own homepage
-makes to draw its timeline), so a batch of any size is seen in full. The JP
-catalogue (two more) is only fetched when a new unit needs its release order.
+makes to draw its timeline), so a batch of any size is seen in full.
 One thumb per new unit comes from dokkaninfo.com. Requests go one at a time
 with a pause between them, and the last downloads are kept in `tools/.cache/`.
 

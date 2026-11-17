@@ -40,15 +40,16 @@ function units() {
 
 // The Global catalogue: the four known units (LR 2 has gained an EZA, DFE 1
 // has gone up to Super EZA), two new LRs, one new DFE, and cards that must be
-// ignored (a plain UR, an SSR, an alt art record).
+// ignored (a plain UR, an SSR, an alt art record). "Later" is listed first and
+// has the lower id, so the numbering has to come from the release dates.
 function globalCards() {
   return [
     card(1000011, 5, 10, 0, 3, 'Known LR One', '2020-01-01'),
     card(1000021, 5, 21, 0, 3, 'Known LR Two', '2020-02-01'),
     card(2000011, 4, 13, 1, 8, 'Known DFE One', '2020-01-01'),
     card(2000021, 4, 24, 1, 0, 'Known DFE Two', '2020-02-01'),
-    card(1000041, 5, 12, 4, 0, 'New LR  Later\n', '2024-06-01'),
-    card(1000031, 5, 23, 0, 0, 'New LR Earlier', '2024-07-01'),
+    card(1000031, 5, 12, 4, 0, 'New LR  Later\n', '2024-07-01'),
+    card(1000041, 5, 23, 0, 0, 'New LR Earlier', '2024-06-01'),
     card(2000031, 4, 14, 1, 0, 'New DFE', '2024-06-01'),
     card(3000011, 4, 10, 0, 7, 'Plain UR', '2024-06-01'),
     card(3000021, 3, 10, 1, 0, 'An SSR', '2024-06-01'),
@@ -56,13 +57,16 @@ function globalCards() {
   ];
 }
 
-// The JP catalogue gives the release order: there, "Earlier" really did come first.
-function jpCards() {
-  return [
-    card(1000031, 5, 23, 0, 0, 'New LR Earlier', '2023-01-01'),
-    card(1000041, 5, 12, 4, 0, 'New LR Later', '2023-03-01'),
-    card(2000031, 4, 14, 1, 0, 'New DFE', '2023-02-01')
-  ];
+// The first 24 bytes of a PNG of the given size: enough for the script's
+// size check, which only reads the header.
+function pngHeader(width, height) {
+  const bytes = Buffer.alloc(33);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes, 0);
+  bytes.writeUInt32BE(13, 8);
+  bytes.write('IHDR', 12, 'ascii');
+  bytes.writeUInt32BE(width, 16);
+  bytes.writeUInt32BE(height, 20);
+  return bytes;
 }
 
 /* --- Pure logic -------------------------------------------- */
@@ -94,19 +98,30 @@ test('sideOf puts every LR on the LR side and only festival URs on the DFE side'
   assert.equal(side(card(1, 3, 10, 1, 0, 'x')), null);
 });
 
-test('buildProposal numbers new units on from the last one, in JP release order', () => {
-  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards(), jpCards: jpCards() });
+test('buildProposal numbers new units on from the last one, in release order', () => {
+  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards() });
   assert.deepEqual(proposal.lr.newUnits.map(u => [u.number, u.id, u.name, u.type, u.class, u.eza, u.tx, u.ty]), [
-    [3, 1000031, 'New LR Earlier', 'str', 'extreme', 0, -1, 1],
-    [4, 1000041, 'New LR Later', 'int', 'super', 0, -1, 1]
+    [3, 1000041, 'New LR Earlier', 'str', 'extreme', 0, -1, 1],
+    [4, 1000031, 'New LR Later', 'int', 'super', 0, -1, 1]
   ]);
   assert.deepEqual(proposal.dfe.newUnits.map(u => [u.number, u.id, u.type, u.class, u.tx, u.ty]), [
     [3, 2000031, 'phy', 'super', 6, -4]
   ]);
 });
 
+test('buildProposal numbers same-day units lower game id first and says so in the notes', () => {
+  const cards = globalCards();
+  cards.find(c => c.id === 1000031).open_at_card = '2024-06-01T09:00:00';
+  cards.find(c => c.id === 1000041).open_at_card = '2024-06-01T09:00:00';
+  const proposal = diff.buildProposal({ units: units(), globalCards: cards });
+  assert.deepEqual(proposal.lr.newUnits.map(u => [u.number, u.id]), [[3, 1000031], [4, 1000041]]);
+  assert.match(proposal.notes.join('\n'), /LR 3 "New LR Later", LR 4 "New LR Earlier" were released on the same day \(2024-06-01\)/);
+  // One unit on a day of its own is not mentioned.
+  assert.doesNotMatch(proposal.notes.join('\n'), /DFE 3 .*same day/);
+});
+
 test('buildProposal reports EZA changes and writes the changelog lines', () => {
-  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards(), jpCards: jpCards() });
+  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards() });
   assert.deepEqual(proposal.lr.ezaChanges, [{ number: 2, name: 'Known LR Two', type: 'teq', from: 0, to: 1 }]);
   assert.deepEqual(proposal.dfe.ezaChanges, [{ number: 1, name: 'Known DFE One', type: 'str', from: 1, to: 2 }]);
   assert.deepEqual(proposal.lr.changelog, ['STR New LR Earlier', 'INT New LR Later', 'TEQ Known LR Two EZA']);
@@ -116,7 +131,7 @@ test('buildProposal reports EZA changes and writes the changelog lines', () => {
 test('buildProposal notes free to play hints, alt art and type mismatches without acting on them', () => {
   const cards = globalCards();
   cards[0].element = 11; // Known LR One is AGL here but TEQ in the catalogue
-  const proposal = diff.buildProposal({ units: units(), globalCards: cards, jpCards: jpCards() });
+  const proposal = diff.buildProposal({ units: units(), globalCards: cards });
   const notes = proposal.notes.join('\n');
   assert.match(notes, /LR 4 "New LR Later" looks free to play/);
   assert.match(notes, /Possible alt art: "Alt Art LR"/);
@@ -125,9 +140,9 @@ test('buildProposal notes free to play hints, alt art and type mismatches withou
 });
 
 test('buildProposal stays silent about ignored ids', () => {
-  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards(), jpCards: jpCards(), ignoreIds: [1000051, 1000041] });
+  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards(), ignoreIds: [1000051, 1000031] });
   assert.doesNotMatch(proposal.notes.join('\n'), /Alt Art LR/);
-  assert.deepEqual(proposal.lr.newUnits.map(u => u.id), [1000031]);
+  assert.deepEqual(proposal.lr.newUnits.map(u => u.id), [1000041]);
 });
 
 test('buildProposal is empty when the checklist already matches', () => {
@@ -135,13 +150,13 @@ test('buildProposal is empty when the checklist already matches', () => {
     card(1000011, 5, 10, 0, 3, 'a', '2020'), card(1000021, 5, 21, 0, 0, 'b', '2020'),
     card(2000011, 4, 13, 1, 7, 'c', '2020'), card(2000021, 4, 24, 1, 0, 'd', '2020')
   ];
-  const proposal = diff.buildProposal({ units: units(), globalCards: cards, jpCards: [] });
+  const proposal = diff.buildProposal({ units: units(), globalCards: cards });
   assert.equal(diff.isEmpty(proposal), true);
   assert.deepEqual(proposal.notes, []);
 });
 
 test('checkProposal accepts what buildProposal made and rejects bad edits', () => {
-  const make = () => diff.buildProposal({ units: units(), globalCards: globalCards(), jpCards: jpCards() });
+  const make = () => diff.buildProposal({ units: units(), globalCards: globalCards() });
   assert.deepEqual(diff.checkProposal(make(), units()), []);
 
   const gap = make(); gap.lr.newUnits[0].number = 9;
@@ -160,15 +175,27 @@ test('checkProposal accepts what buildProposal made and rejects bad edits', () =
   assert.match(diff.checkProposal(ghost, units()).join('\n'), /there is no such unit/);
 });
 
+test('checkProposal explains broken entries instead of crashing', () => {
+  const make = () => diff.buildProposal({ units: units(), globalCards: globalCards() });
+  const problems = edit => diff.checkProposal(edit(make()), units()).join('\n');
+
+  assert.match(problems(p => { p.lr.newUnits[0] = null; return p; }), /LR new unit in place 1: must be an entry like the others/);
+  assert.match(problems(p => { p.dfe.ezaChanges[0] = 'x'; return p; }), /DFE EZA change in place 1: must be an entry like the others/);
+  assert.match(problems(p => { p.lr.newUnits[0].number = '3'; return p; }), /"number" must be a whole number \(written without quotes\)/);
+  assert.match(problems(p => { p.lr.ezaChanges.push({ number: 2, to: 0 }); return p; }), /unit 2 is listed twice/);
+  assert.match(problems(() => null), /LR: the proposal must have newUnits/);
+  assert.match(problems(() => []), /DFE: the proposal must have newUnits/);
+});
+
 test('applyToUnits and formatUnits produce one tidy line per unit', () => {
-  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards(), jpCards: jpCards() });
+  const proposal = diff.buildProposal({ units: units(), globalCards: globalCards() });
   const text = diff.formatUnits(diff.applyToUnits(units().lr, proposal.lr));
   assert.equal(text,
     '{\n' +
     '  "1": {"id": 1000011, "type": "agl", "class": "super", "eza": 1, "tx": -1, "ty": 1},\n' +
     '  "2": {"id": 1000021, "type": "teq", "class": "extreme", "eza": 1, "tx": -1, "ty": 1},\n' +
-    '  "3": {"id": 1000031, "type": "str", "class": "extreme", "tx": -1, "ty": 1},\n' +
-    '  "4": {"id": 1000041, "type": "int", "class": "super", "tx": -1, "ty": 1}\n' +
+    '  "3": {"id": 1000041, "type": "str", "class": "extreme", "tx": -1, "ty": 1},\n' +
+    '  "4": {"id": 1000031, "type": "int", "class": "super", "tx": -1, "ty": 1}\n' +
     '}\n');
 });
 
@@ -214,8 +241,7 @@ function makeRepo() {
 
   write(root, 'tools/.cache/versions.json', JSON.stringify({ database: 'test' }));
   write(root, 'tools/.cache/catalogue-global.json', JSON.stringify(globalCards()));
-  write(root, 'tools/.cache/catalogue-jp.json', JSON.stringify(jpCards()));
-  for (const id of [1000031, 1000041, 2000031]) write(root, `tools/.cache/thumbs/${id}.png`, 'thumb');
+  for (const id of [1000031, 1000041, 2000031]) write(root, `tools/.cache/thumbs/${id}.png`, pngHeader(250, 250));
   return root;
 }
 
@@ -262,10 +288,10 @@ test('--apply writes units, thumbs and changelog, and the result validates', t =
   const lr = JSON.parse(fs.readFileSync(path.join(root, 'data/lr.units.json'), 'utf8'));
   assert.deepEqual(Object.keys(lr), ['1', '2', '3', '4']);
   assert.equal(lr[2].eza, 1);
-  assert.equal(lr[3].id, 1000031);
+  assert.equal(lr[3].id, 1000041);
   const dfe = JSON.parse(fs.readFileSync(path.join(root, 'data/dfe.units.json'), 'utf8'));
   assert.equal(dfe[1].eza, 2);
-  assert.equal(fs.readFileSync(path.join(root, 'images/lr/thumbs/4.png'), 'utf8'), 'thumb');
+  assert.deepEqual(fs.readFileSync(path.join(root, 'images/lr/thumbs/4.png')), pngHeader(250, 250));
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, 'data/lr.json'), 'utf8')).changelog,
     ['STR Reworded by hand', 'INT New LR Later', 'TEQ Known LR Two EZA']);
   assert.equal(fs.existsSync(file), false);
@@ -308,6 +334,63 @@ test('--apply puts every file back when the validator rejects the result', t => 
   assert.equal(fs.readFileSync(path.join(root, 'data/lr.json'), 'utf8'), dataBefore);
   assert.equal(fs.existsSync(path.join(root, 'images/lr/thumbs/3.png')), false);
   assert.equal(fs.existsSync(path.join(root, 'tools/proposal.json')), true);
+});
+
+// Runs a check in a fresh throwaway repo and returns its root and a helper
+// that reads every site file, to show nothing changed.
+function checkedRepo(t) {
+  const root = makeRepo();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  run(root, '--offline');
+  const snapshot = () => ['data/lr.units.json', 'data/dfe.units.json', 'data/lr.json', 'data/dfe.json', 'index.html']
+    .map(file => fs.readFileSync(path.join(root, file), 'utf8')).join('\n---\n') +
+    ['lr', 'dfe'].map(mode => fs.readdirSync(path.join(root, `images/${mode}/thumbs`)).join(',')).join('|');
+  return { root, snapshot };
+}
+
+test('--apply puts every file back when it fails part way, not only on a validator rejection', t => {
+  const { root, snapshot } = checkedRepo(t);
+  // The DFE data file has lost its changelog list, so applying fails after
+  // the LR files and thumbs have already been written.
+  const dataFile = path.join(root, 'data/dfe.json');
+  fs.writeFileSync(dataFile, fs.readFileSync(dataFile, 'utf8').replace('"changelog"', '"notes"'));
+  const before = snapshot();
+
+  const { code, out } = run(root, '--apply');
+  assert.equal(code, 1, out);
+  assert.match(out, /Applying stopped part way \(no "changelog" list found in the data file\), so every file was put back/);
+  assert.doesNotMatch(out, /\n\s+at /);
+  assert.equal(snapshot(), before);
+  assert.equal(fs.existsSync(path.join(root, 'tools/proposal.json')), true);
+});
+
+test('--apply refuses a saved thumb that is not a 250 x 250 PNG', t => {
+  const { root, snapshot } = checkedRepo(t);
+  write(root, 'tools/.cache/thumbs/1000041.png', pngHeader(1, 1));
+  write(root, 'tools/.cache/thumbs/2000031.png', 'not an image');
+  const before = snapshot();
+
+  const { code, out } = run(root, '--apply');
+  assert.equal(code, 1, out);
+  assert.match(out, /LR 3: tools.\.cache.thumbs.1000041\.png is not a 250 x 250 px PNG/);
+  assert.match(out, /DFE 3: tools.\.cache.thumbs.2000031\.png is not a 250 x 250 px PNG/);
+  assert.equal(snapshot(), before);
+});
+
+test('--apply explains a proposal that is no longer valid JSON', t => {
+  const { root, snapshot } = checkedRepo(t);
+  const file = path.join(root, 'tools/proposal.json');
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/\n}\s*$/, ',\n}\n'));
+  const before = snapshot();
+
+  const broken = run(root, '--apply');
+  assert.equal(broken.code, 1, broken.out);
+  assert.match(broken.out, /proposal\.json is not valid JSON any more, so nothing was changed/);
+  assert.doesNotMatch(broken.out, /\n\s+at /);
+
+  fs.writeFileSync(file, '');
+  assert.match(run(root, '--apply').out, /proposal\.json is empty/);
+  assert.equal(snapshot(), before);
 });
 
 test('--apply without a proposal explains what to do', t => {
