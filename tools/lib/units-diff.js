@@ -13,7 +13,10 @@
  *   applyToUnits()    proposal + units -> the new units object
  *   formatUnits()     units object -> the one-line-per-unit file text
  *   replaceChangelog() swaps the changelog array inside a data file's text
+ *   addToF2p()        adds unit numbers to the f2p list inside a data file's text
  */
+
+const { parseRanges, formatRanges } = require('../../js/ranges.js');
 
 const TYPES = ['agl', 'teq', 'str', 'phy', 'int'];
 const CLASSES = ['super', 'extreme'];
@@ -38,7 +41,8 @@ const RARITY_UR = 4;
 const TAG_DOKKAN_FESTIVAL = 1;
 const TAG_ALT_ART = 11;
 // Tags that usually mean a free to play unit: F2P, World Tournament,
-// Ultimate Clash, Battle Road. Only ever used as a hint for the owner.
+// Ultimate Clash, Battle Road. A new LR with one of these is pre-ticked
+// ("f2p": true) in the proposal; the owner can untick it before applying.
 const F2P_TAGS = [4, 5, 6, 10];
 
 // Thumb offset a new unit starts with on each side (see README, "A unit line").
@@ -157,9 +161,12 @@ function buildProposal({ units, globalCards, ignoreIds }) {
         ty: DEFAULT_OFFSET[side].ty,
         released: card.released
       };
+      // LR only: whether applying adds it to f2p in data/lr.json.
+      if (side === 'lr') entry.f2p = F2P_TAGS.includes(card.tag);
       newUnits.push(entry);
-      if (side === 'lr' && F2P_TAGS.includes(card.tag)) {
-        notes.push(`LR ${number} "${card.name}" looks free to play (catalogue tag ${card.tag}). Add ${number} to f2p in data/lr.json if you agree.`);
+      if (entry.f2p) {
+        notes.push(`LR ${number} "${card.name}" looks free to play (catalogue tag ${card.tag}), so it is marked "f2p": true ` +
+          'and applying will add it to f2p in data/lr.json. Set it to false in this file if it is not free to play.');
       }
     });
 
@@ -271,6 +278,8 @@ function checkProposal(proposal, units) {
       for (const axis of ['tx', 'ty']) {
         if (!Number.isInteger(unit[axis])) problems.push(`${where}: ${axis} must be a whole number`);
       }
+      if ('f2p' in unit && typeof unit.f2p !== 'boolean') problems.push(`${where}: f2p must be true or false (written without quotes)`);
+      else if (unit.f2p === true && side !== 'lr') problems.push(`${where}: only the LR side has an f2p list, so f2p must be false here`);
     });
 
     const changed = new Set();
@@ -337,8 +346,18 @@ function replaceChangelog(text, lines) {
   return text.replace(pattern, (all, open) => `${open}${body}\n  ]`);
 }
 
+// Adds unit numbers to the "f2p" range list inside a data file's text, kept
+// in the same "1-5,9,14-16" form, leaving the rest of the file as it was.
+function addToF2p(text, numbers) {
+  const pattern = /("f2p":\s*")([^"]*)(")/;
+  const found = text.match(pattern);
+  if (!found) throw new Error('no "f2p" list found in the data file');
+  const merged = formatRanges([...parseRanges(found[2]), ...numbers]);
+  return text.replace(pattern, (all, open, list, close) => `${open}${merged}${close}`);
+}
+
 module.exports = {
   TYPES, DEFAULT_OFFSET, EZA_WORDS,
   cleanName, toTime, releaseDay, decodeCard, sideOf, changelogLine,
-  buildProposal, isEmpty, checkProposal, applyToUnits, formatUnits, replaceChangelog
+  buildProposal, isEmpty, checkProposal, applyToUnits, formatUnits, replaceChangelog, addToF2p
 };

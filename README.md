@@ -25,9 +25,10 @@ The checklist data is split in two per side:
 - `data/lr.units.json` and `data/dfe.units.json` hold one line per unit: its
   game id, type, class, EZA state and thumb placement. The number of lines is
   the number of units; nothing else needs counting.
-- `data/lr.json` and `data/dfe.json` hold the texts and the three things kept
-  by hand: the `f2p` list (LR side only), the `altArt` list and the
-  `changelog`.
+- `data/lr.json` and `data/dfe.json` hold the texts and three lists: the
+  `f2p` list (LR side only), the `altArt` list and the `changelog`. The update
+  script fills in the changelog and new free to play LRs; `altArt` is kept by
+  hand.
 
 Nothing in `js/scripts.js` needs editing to add a character.
 
@@ -48,7 +49,9 @@ The short version. Each step is explained further down.
    - *released on the same day*: those units are numbered lower game id
      first. Swap their `number` values in `tools/proposal.json` if you want
      them the other way.
-   - *looks free to play*: note the number for step 7.
+   - *looks free to play*: that LR is marked `"f2p": true` in
+     `tools/proposal.json` and will be added to `f2p` when you apply. Set it to
+     `false` if it is not free to play, or `true` on one the script missed.
    - *possible alt art*: added by hand, see "Adding a character by hand".
    - *thumb could not be downloaded*: save the 250 x 250 px PNG at the path
      the note gives.
@@ -62,8 +65,8 @@ The short version. Each step is explained further down.
    refuses, it says exactly why and nothing has been changed: fix
    `tools/proposal.json` and apply again. If anything fails part way, every
    file is put back.
-7. **Hand-kept lists.** Add new free to play numbers to `f2p` in
-   `data/lr.json`, and any alt art to `altArt` plus the unit's `alt` field.
+7. **Alt art by hand.** Add any alt art to `altArt` in the data file plus the
+   unit's `alt` field. (Free to play LRs were handled in steps 3 and 6.)
 8. **Look at the site** locally (see "Running locally") and at `git diff`.
 9. **Commit and push.** Nothing is committed for you.
 
@@ -95,10 +98,10 @@ written to the site's files until you have looked at the proposal.
    ```
 
    This copies the new thumbs into `images/<side>/thumbs/`, adds the unit
-   lines, updates EZA states, replaces the changelog with the proposal's lines
-   and runs the validator. If the validator objects, every file is put back.
-4. Add any new free to play unit to `f2p` in `data/lr.json` (the script only
-   hints at these), look at the page, then commit. Nothing is committed for you.
+   lines, updates EZA states, replaces the changelog with the proposal's lines,
+   adds new LRs marked `"f2p": true` to `f2p` in `data/lr.json`, and runs the
+   validator. If anything fails, every file is put back.
+4. Look at the page, then commit. Nothing is committed for you.
 
 What the script decides, and how:
 
@@ -110,8 +113,12 @@ What the script decides, and how:
 - **EZA and Super EZA:** from the card's `optimal_awakening_step`.
 - **Changelog:** one line per new unit (`AGL Name`) and per EZA
   (`AGL Name EZA`, `AGL Name Super EZA`).
-- **Left to you:** the `f2p` and `altArt` lists. Possible alt art and free to
-  play units are only mentioned in the proposal's notes.
+- **Free to play:** a new LR whose catalogue tag usually means free to play
+  (F2P, World Tournament, Ultimate Clash, Battle Road) is marked
+  `"f2p": true` in the proposal, so applying adds it to `f2p`. Every other new
+  LR is marked `false`. You can change either before applying.
+- **Left to you:** the `altArt` list. Possible alt art is only mentioned in
+  the proposal's notes.
 
 It keeps its requests small. One request asks dokkandb whether its data has
 changed since the last check; if not, that is all. If it has, the Global card

@@ -128,12 +128,15 @@ test('buildProposal reports EZA changes and writes the changelog lines', () => {
   assert.deepEqual(proposal.dfe.changelog, ['PHY New DFE', 'STR Known DFE One Super EZA']);
 });
 
-test('buildProposal notes free to play hints, alt art and type mismatches without acting on them', () => {
+test('buildProposal pre-ticks free to play LRs and notes alt art and type mismatches', () => {
   const cards = globalCards();
   cards[0].element = 11; // Known LR One is AGL here but TEQ in the catalogue
   const proposal = diff.buildProposal({ units: units(), globalCards: cards });
   const notes = proposal.notes.join('\n');
-  assert.match(notes, /LR 4 "New LR Later" looks free to play/);
+  // "Later" has catalogue tag 4 (free to play), "Earlier" has none; DFEs get no f2p field.
+  assert.deepEqual(proposal.lr.newUnits.map(u => [u.number, u.f2p]), [[3, false], [4, true]]);
+  assert.equal('f2p' in proposal.dfe.newUnits[0], false);
+  assert.match(notes, /LR 4 "New LR Later" looks free to play \(catalogue tag 4\), so it is marked "f2p": true/);
   assert.match(notes, /Possible alt art: "Alt Art LR"/);
   assert.match(notes, /LR 1 "Known LR One" is AGL here but TEQ in the catalogue/);
   assert.equal(proposal.lr.newUnits.some(u => u.id === 1000051), false);
@@ -183,6 +186,8 @@ test('checkProposal explains broken entries instead of crashing', () => {
   assert.match(problems(p => { p.dfe.ezaChanges[0] = 'x'; return p; }), /DFE EZA change in place 1: must be an entry like the others/);
   assert.match(problems(p => { p.lr.newUnits[0].number = '3'; return p; }), /"number" must be a whole number \(written without quotes\)/);
   assert.match(problems(p => { p.lr.ezaChanges.push({ number: 2, to: 0 }); return p; }), /unit 2 is listed twice/);
+  assert.match(problems(p => { p.lr.newUnits[0].f2p = 'yes'; return p; }), /f2p must be true or false/);
+  assert.match(problems(p => { p.dfe.newUnits[0].f2p = true; return p; }), /only the LR side has an f2p list/);
   assert.match(problems(() => null), /LR: the proposal must have newUnits/);
   assert.match(problems(() => []), /DFE: the proposal must have newUnits/);
 });
@@ -197,6 +202,13 @@ test('applyToUnits and formatUnits produce one tidy line per unit', () => {
     '  "3": {"id": 1000041, "type": "str", "class": "extreme", "tx": -1, "ty": 1},\n' +
     '  "4": {"id": 1000031, "type": "int", "class": "super", "tx": -1, "ty": 1}\n' +
     '}\n');
+});
+
+test('addToF2p merges numbers into the f2p list and leaves the rest alone', () => {
+  const before = '{\n  "mode": "lr",\n\n  "f2p": "1-5,9,14-16,188",\n\n  "altArt": [14]\n}\n';
+  assert.equal(diff.addToF2p(before, [197, 6]), '{\n  "mode": "lr",\n\n  "f2p": "1-6,9,14-16,188,197",\n\n  "altArt": [14]\n}\n');
+  assert.equal(diff.addToF2p(before, [9]), before);
+  assert.throws(() => diff.addToF2p('{ "mode": "dfe" }', [1]), /no "f2p" list/);
 });
 
 test('replaceChangelog swaps only the changelog list', () => {
@@ -225,10 +237,11 @@ function write(root, file, content) {
 // the script's thumb folder, as if a previous check had downloaded them.
 function makeRepo() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dokkanlist-update-'));
-  const side = mode => ({
-    mode, label: 'Units', title: 'Test', favicon: 'icon.ico', iconDir: `images/${mode}`,
-    altArt: [], changelog: ['Old line']
-  });
+  const side = mode => Object.assign(
+    { mode, label: 'Units', title: 'Test', favicon: 'icon.ico', iconDir: `images/${mode}` },
+    mode === 'lr' ? { f2p: '1' } : {},
+    { altArt: [], changelog: ['Old line'] }
+  );
   write(root, 'data/lr.json', JSON.stringify(side('lr'), null, 2).replace('"altArt": []', '"altArt": []') + '\n');
   write(root, 'data/dfe.json', JSON.stringify(side('dfe'), null, 2) + '\n');
   write(root, 'data/lr.units.json', diff.formatUnits(units().lr));
@@ -294,6 +307,9 @@ test('--apply writes units, thumbs and changelog, and the result validates', t =
   assert.deepEqual(fs.readFileSync(path.join(root, 'images/lr/thumbs/4.png')), pngHeader(250, 250));
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, 'data/lr.json'), 'utf8')).changelog,
     ['STR Reworded by hand', 'INT New LR Later', 'TEQ Known LR Two EZA']);
+  // LR 4 was pre-ticked as free to play, LR 3 was not.
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'data/lr.json'), 'utf8')).f2p, '1,4');
+  assert.match(out, /LR: added 4 to f2p/);
   assert.equal(fs.existsSync(file), false);
 
   // Running the check again finds nothing left to do.
@@ -362,6 +378,21 @@ test('--apply puts every file back when it fails part way, not only on a validat
   assert.doesNotMatch(out, /\n\s+at /);
   assert.equal(snapshot(), before);
   assert.equal(fs.existsSync(path.join(root, 'tools/proposal.json')), true);
+});
+
+test('--apply leaves f2p alone when the owner unticks a unit', t => {
+  const { root } = checkedRepo(t);
+  const file = path.join(root, 'tools/proposal.json');
+  const proposal = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(proposal.lr.newUnits[1].f2p, true);
+  proposal.lr.newUnits[1].f2p = false;
+  // A unit the catalogue gave no hint for can be ticked by hand too.
+  proposal.lr.newUnits[0].f2p = true;
+  fs.writeFileSync(file, JSON.stringify(proposal, null, 2));
+
+  const { code, out } = run(root, '--apply');
+  assert.equal(code, 0, out);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'data/lr.json'), 'utf8')).f2p, '1,3');
 });
 
 test('--apply refuses a saved thumb that is not a 250 x 250 PNG', t => {

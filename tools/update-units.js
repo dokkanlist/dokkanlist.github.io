@@ -17,7 +17,8 @@
  *   tools/preview.html    the new tiles as the site would draw them. Open it.
  *
  * --apply then copies the thumbs, edits data/<side>.units.json and the
- * changelog in data/<side>.json, and runs the validator. It never commits:
+ * changelog in data/<side>.json, adds new LRs marked "f2p": true to the f2p
+ * list in data/lr.json, and runs the validator. It never commits:
  * look at `git diff`, then commit yourself.
  *
  * What it reads from the internet (run from the repo root):
@@ -269,7 +270,8 @@ function writePreview(proposal, units) {
     for (const unit of part.newUnits) {
       const thumb = path.relative(TOOLS, cachedThumb(unit.id)).replace(/\\/g, '/');
       cards.push(`<div class="card">${tileHtml(side, unit, thumb)}<p><b>New: ${SIDE_LABEL[side]} ${unit.number}</b><br>` +
-        `${esc(unit.name)}<br><i>${esc(unit.title)}</i><br>${unit.class} ${unit.type.toUpperCase()}, EZA: ${ezaWord(unit.eza)}<br>game id ${unit.id}</p></div>`);
+        `${esc(unit.name)}<br><i>${esc(unit.title)}</i><br>${unit.class} ${unit.type.toUpperCase()}, EZA: ${ezaWord(unit.eza)}` +
+        `${side === 'lr' ? `<br>F2P: ${unit.f2p ? '<b>yes, will be added to f2p</b>' : 'no'}` : ''}<br>game id ${unit.id}</p></div>`);
     }
     for (const change of part.ezaChanges) {
       const unit = Object.assign({}, units[side][change.number], { eza: change.to });
@@ -327,7 +329,7 @@ function report(proposal) {
     console.log(`\n${SIDE_LABEL[side]} side`);
     if (!part.newUnits.length && !part.ezaChanges.length) console.log('  no changes');
     for (const unit of part.newUnits) {
-      console.log(`  NEW  ${SIDE_LABEL[side]} ${unit.number}  ${unit.class} ${unit.type.toUpperCase()}  ${unit.name} - ${unit.title}  (game id ${unit.id}, EZA: ${ezaWord(unit.eza)})`);
+      console.log(`  NEW  ${SIDE_LABEL[side]} ${unit.number}  ${unit.class} ${unit.type.toUpperCase()}  ${unit.name} - ${unit.title}  (game id ${unit.id}, EZA: ${ezaWord(unit.eza)}${unit.f2p ? ', F2P' : ''})`);
     }
     for (const change of part.ezaChanges) {
       console.log(`  EZA  ${SIDE_LABEL[side]} ${change.number}  ${change.name}: ${ezaWord(change.from)} -> ${ezaWord(change.to)}`);
@@ -358,7 +360,7 @@ async function check(options) {
   // "generated" first, then how to use the file, so it reads top to bottom.
   const ordered = {
     generated: proposal.generated,
-    howTo: 'Edit or delete entries, then run: node tools/update-units.js --apply. New unit numbers must carry on from the last unit with no gaps. eza is 0 for none, 1 for EZA, 2 for Super EZA. Changelog lines are yours to reword; an empty changelog list leaves that side\'s changelog alone. Units released on the same day are numbered lower game id first; the notes name them.',
+    howTo: 'Edit or delete entries, then run: node tools/update-units.js --apply. New unit numbers must carry on from the last unit with no gaps. eza is 0 for none, 1 for EZA, 2 for Super EZA. Changelog lines are yours to reword; an empty changelog list leaves that side\'s changelog alone. On the LR side, "f2p": true adds the unit to f2p in data/lr.json; set it to false to leave it out. Units released on the same day are numbered lower game id first; the notes name them.',
     lr: proposal.lr,
     dfe: proposal.dfe,
     notes: proposal.notes
@@ -453,6 +455,12 @@ function apply(options) {
         remember(paths.data);
         fs.writeFileSync(paths.data, diff.replaceChangelog(fs.readFileSync(paths.data, 'utf8'), part.changelog));
       }
+      // New LRs ticked "f2p": true join the f2p list.
+      const f2p = part.newUnits.filter(unit => unit.f2p === true).map(unit => unit.number);
+      if (f2p.length) {
+        remember(paths.data);
+        fs.writeFileSync(paths.data, diff.addToF2p(fs.readFileSync(paths.data, 'utf8'), f2p));
+      }
     }
   } catch (err) {
     undo();
@@ -474,9 +482,11 @@ function apply(options) {
   for (const side of SIDES) {
     const part = proposal[side];
     if (part.newUnits.length) console.log(`  ${SIDE_LABEL[side]}: added ${part.newUnits.map(u => u.number).join(', ')}`);
+    const f2p = part.newUnits.filter(u => u.f2p === true).map(u => u.number);
+    if (f2p.length) console.log(`  ${SIDE_LABEL[side]}: added ${f2p.join(', ')} to f2p`);
     if (part.ezaChanges.length) console.log(`  ${SIDE_LABEL[side]}: EZA state changed on ${part.ezaChanges.map(c => c.number).join(', ')}`);
   }
-  console.log('\nNothing was committed. Check the page and `git diff`, update f2p or altArt if needed, then commit.');
+  console.log('\nNothing was committed. Check the page and `git diff`, add any alt art by hand, then commit.');
 }
 
 /* --- Run -------------------------------------------------- */
