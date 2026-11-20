@@ -194,5 +194,6 @@
   "193": {"id": 1034121, "type": "teq", "class": "extreme", "tx": -1, "ty": -1},
   "194": {"id": 1034151, "type": "int", "class": "extreme", "tx": 8, "ty": -1},
   "195": {"id": 1034201, "type": "int", "class": "super", "tx": -2, "ty": -3},
-  "196": {"id": 1034591, "type": "agl", "class": "super", "tx": -1, "ty": 1}
+  "196": {"id": 1034591, "type": "agl", "class": "super", "tx": -1, "ty": 1},
+  "197": {"id": 1033731, "type": "str", "class": "super", "tx": -1, "ty": 1}
 }
